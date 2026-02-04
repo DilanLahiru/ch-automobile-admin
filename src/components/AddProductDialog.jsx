@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   X,
   Upload,
@@ -18,34 +18,38 @@ import { Textarea } from './ui/Textarea'
 import { Switch } from './ui/Switch'
 import { Dialog } from './ui/Dialog'
 
+import { useDispatch, useSelector } from "react-redux";
+import { getAllCategories } from "../features/categorySlice";
+import { getAllSuppliers } from "../features/supplierSlice";
+
 // Category options
-const categories = [
-  { value: 'engine', label: 'Engine Parts' },
-  { value: 'brake', label: 'Brake System' },
-  { value: 'electrical', label: 'Electrical' },
-  { value: 'suspension', label: 'Suspension' },
-  { value: 'filters', label: 'Filters' },
-  { value: 'fluids', label: 'Fluids' },
-  { value: 'ignition', label: 'Ignition' },
-  { value: 'exhaust', label: 'Exhaust System' },
-  { value: 'cooling', label: 'Cooling System' },
-  { value: 'interior', label: 'Interior' },
-  { value: 'exterior', label: 'Exterior' },
-]
+// const categories = [
+//   { value: 'engine', label: 'Engine Parts' },
+//   { value: 'brake', label: 'Brake System' },
+//   { value: 'electrical', label: 'Electrical' },
+//   { value: 'suspension', label: 'Suspension' },
+//   { value: 'filters', label: 'Filters' },
+//   { value: 'fluids', label: 'Fluids' },
+//   { value: 'ignition', label: 'Ignition' },
+//   { value: 'exhaust', label: 'Exhaust System' },
+//   { value: 'cooling', label: 'Cooling System' },
+//   { value: 'interior', label: 'Interior' },
+//   { value: 'exterior', label: 'Exterior' },
+// ]
 
 // Supplier options
-const suppliers = [
-  { value: 'bosch', label: 'Bosch Automotive' },
-  { value: 'denso', label: 'Denso' },
-  { value: 'delphi', label: 'Delphi Technologies' },
-  { value: 'magna', label: 'Magna International' },
-  { value: 'valeo', label: 'Valeo' },
-  { value: 'continental', label: 'Continental AG' },
-  { value: 'mahle', label: 'Mahle' },
-  { value: 'mann-filter', label: 'MANN-FILTER' },
-  { value: 'local', label: 'Local Supplier' },
-  { value: 'other', label: 'Other' },
-]
+// const suppliers = [
+//   { value: 'bosch', label: 'Bosch Automotive' },
+//   { value: 'denso', label: 'Denso' },
+//   { value: 'delphi', label: 'Delphi Technologies' },
+//   { value: 'magna', label: 'Magna International' },
+//   { value: 'valeo', label: 'Valeo' },
+//   { value: 'continental', label: 'Continental AG' },
+//   { value: 'mahle', label: 'Mahle' },
+//   { value: 'mann-filter', label: 'MANN-FILTER' },
+//   { value: 'local', label: 'Local Supplier' },
+//   { value: 'other', label: 'Other' },
+// ]
 
 // Unit options
 const units = [
@@ -58,9 +62,15 @@ const units = [
 ]
 
 export function AddProductDialog({ open, onClose, onAddProduct }) {
+  const dispatch = useDispatch();
+  const { categories: categoriesFromRedux, loading: categoriesLoading } = useSelector(
+    (state) => state.category,
+  );
+  const { suppliers: suppliersFromRedux, loading: suppliersLoading } = useSelector(
+    (state) => state.supplier,
+  );
   const [formData, setFormData] = useState({
     name: '',
-    sku: '',
     category: '',
     supplier: '',
     price: '',
@@ -81,6 +91,15 @@ export function AddProductDialog({ open, onClose, onAddProduct }) {
   const [errors, setErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [imagePreview, setImagePreview] = useState(null)
+
+  useEffect(() => {
+    handleLoadCategories();
+  }, []);
+
+  const handleLoadCategories = () => {
+    dispatch(getAllCategories());
+    dispatch(getAllSuppliers());
+  };
 
   // Generate SKU based on product name
   const generateSKU = () => {
@@ -130,7 +149,6 @@ export function AddProductDialog({ open, onClose, onAddProduct }) {
     const newErrors = {}
     
     if (!formData.name.trim()) newErrors.name = 'Product name is required'
-    if (!formData.sku.trim()) newErrors.sku = 'SKU is required'
     if (!formData.category) newErrors.category = 'Category is required'
     if (!formData.price || parseFloat(formData.price) <= 0) newErrors.price = 'Valid price is required'
     if (!formData.cost || parseFloat(formData.cost) <= 0) newErrors.cost = 'Valid cost is required'
@@ -208,7 +226,6 @@ export function AddProductDialog({ open, onClose, onAddProduct }) {
   const handleClose = () => {
     setFormData({
       name: '',
-      sku: '',
       category: '',
       supplier: '',
       price: '',
@@ -327,22 +344,16 @@ export function AddProductDialog({ open, onClose, onAddProduct }) {
           </div>
 
           <div className="space-y-2">
-            <label className="flex items-center justify-between text-sm font-medium text-gray-700">
-              <span>SKU *</span>
-              <button
-                type="button"
-                onClick={generateSKU}
-                className="text-xs font-normal text-blue-600 hover:text-blue-800"
-              >
-                Generate SKU
-              </button>
+            <label className="flex items-center gap-1 text-sm font-medium text-gray-700">
+              <span>Price *</span>
+              <Info className="h-3 w-3 text-gray-400" />
             </label>
             <Input
-              value={formData.sku}
-              onChange={(e) => handleChange('sku', e.target.value)}
-              placeholder="e.g., OF-2023-X"
-              leftIcon={<Hash className="h-4 w-4" />}
-              error={errors.sku}
+              value={formData.price}
+              onChange={(e) => handleChange('price', e.target.value)}
+              placeholder="Rs 0.00"
+              leftIcon={<DollarSign className="h-4 w-4" />}
+              error={errors.price}
               required
             />
           </div>
@@ -350,7 +361,7 @@ export function AddProductDialog({ open, onClose, onAddProduct }) {
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">Category *</label>
             <Select
-              options={categories}
+              options={categoriesFromRedux.map(cat => ({ value: cat._id, label: cat.name }))}
               value={formData.category}
               onChange={(value) => handleChange('category', value)}
               placeholder="Select category"
@@ -362,7 +373,7 @@ export function AddProductDialog({ open, onClose, onAddProduct }) {
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">Supplier</label>
             <Select
-              options={suppliers}
+              options={suppliersFromRedux.map(sup => ({ value: sup._id, label: sup.name }))}
               value={formData.supplier}
               onChange={(value) => handleChange('supplier', value)}
               placeholder="Select supplier"

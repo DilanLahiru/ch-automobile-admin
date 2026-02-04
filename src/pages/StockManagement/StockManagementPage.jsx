@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react'
+import React, { useState, useEffect, use } from "react";
 import {
   Plus,
   Filter,
@@ -10,158 +9,101 @@ import {
   XCircle,
   TrendingUp,
   Box,
-} from 'lucide-react'
-import { Card } from '../../components/ui/Card'
-import { Button } from '../../components/ui/Button'
-import { Badge } from '../../components/ui/Badge'
-import { SearchBar } from '../../components/ui/SearchBar'
-import { AddProductDialog } from '../../components/AddProductDialog'
-
-// Mock Data for Car Parts
-const stockData = [
-  {
-    id: 1,
-    name: 'Premium Oil Filter',
-    sku: 'OF-2023-X',
-    category: 'Engine Parts',
-    price: 12.99,
-    stock: 100,
-    quantity: 45,
-    minLevel: 10,
-    status: 'In Stock',
-  },
-  {
-    id: 2,
-    name: 'Ceramic Brake Pads (Front)',
-    sku: 'BP-F-550',
-    category: 'Brake System',
-    price: 89.50,
-    stock: 150,
-    quantity: 8,
-    minLevel: 15,
-    status: 'Low Stock',
-  },
-  {
-    id: 3,
-    name: 'Synthetic Motor Oil 5W-30',
-    sku: 'OIL-SYN-5W30',
-    category: 'Fluids',
-    price: 34.99,
-    stock: 100,
-    quantity: 90,
-    minLevel: 50,
-    status: 'In Stock',
-  },
-  {
-    id: 4,
-    name: 'Spark Plug Iridium',
-    sku: 'SP-IR-99',
-    category: 'Ignition',
-    price: 18.75,
-    stock: 50,
-    quantity: 0,
-    minLevel: 20,
-    
-    status: 'Out of Stock',
-  },
-  {
-    id: 5,
-    name: 'Air Filter Cabin',
-    sku: 'AF-C-200',
-    category: 'Filters',
-    price: 22.50,
-    stock: 40,
-    quantity: 15,
-    minLevel: 10,
-    status: 'In Stock',
-  },
-  {
-    id: 6,
-    name: 'Alternator 120A',
-    sku: 'ALT-120-G',
-    category: 'Electrical',
-    price: 185.00,
-    stock: 35,
-    quantity: 3,
-    minLevel: 5,
-    status: 'Low Stock',
-  },
-  {
-    id: 7,
-    name: 'Timing Belt Kit',
-    sku: 'TBK-900',
-    category: 'Engine Parts',
-    price: 145.00,
-    stock: 20,
-    quantity: 12,
-    minLevel: 8,
-    
-    status: 'In Stock',
-  },
-]
+} from "lucide-react";
+import { Card } from "../../components/ui/Card";
+import { Button } from "../../components/ui/Button";
+import { Badge } from "../../components/ui/Badge";
+import { SearchBar } from "../../components/ui/SearchBar";
+import { AddProductDialog } from "../../components/AddProductDialog";
+import { useDispatch, useSelector } from "react-redux";
+import { getAllProducts, createProduct } from "../../features/productSlice";
 
 export function StockManagementPage() {
-  const [searchTerm, setSearchTerm] = useState('')
-  const [isAddProductOpen, setIsAddProductOpen] = useState(false)
+  const dispatch = useDispatch();
+  const { products: productsFromRedux, loading: productsLoading } = useSelector(
+    (state) => state.product,
+  );
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'In Stock':
-        return (
-          <Badge variant="success" className="gap-1">
-            <CheckCircle2 className="h-3 w-3" /> In Stock
-          </Badge>
-        )
-      case 'Low Stock':
-        return (
-          <Badge variant="warning" className="gap-1">
-            <AlertTriangle className="h-3 w-3" /> Low Stock
-          </Badge>
-        )
-      case 'Out of Stock':
-        return (
-          <Badge variant="error" className="gap-1">
-            <XCircle className="h-3 w-3" /> Out of Stock
-          </Badge>
-        )
-      default:
-        return <Badge variant="neutral">{status}</Badge>
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isAddProductOpen, setIsAddProductOpen] = useState(false);
+
+
+  useEffect(() => {
+    handleLoadProducts();
+  }, []);
+
+
+  const getStatusBadge = (quantity, minimumStock) => {
+    if (quantity === 0) {
+      return (
+        <Badge variant="error" className="gap-1">
+          <XCircle className="h-3 w-3" /> Out of Stock
+        </Badge>
+      );
+    } else if (quantity <= minimumStock) {
+      return (
+        <Badge variant="warning" className="gap-1">
+          <AlertTriangle className="h-3 w-3" /> Low Stock
+        </Badge>
+      );
+    } else {
+      return (
+        <Badge variant="success" className="gap-1">
+          <CheckCircle2 className="h-3 w-3" /> In Stock
+        </Badge>
+      );
     }
-  }
+  };
+
+  const handleLoadProducts = () => {
+    dispatch(getAllProducts());
+  };
 
   const handleAddProduct = (productData) => {
-    console.log('New product added:', productData)
-    // Here you would update your stockData state or make an API call
-    // For now, we'll just log it
-    setIsAddProductOpen(false)
-  }
+    console.log("New product added:", productData);
+    setIsAddProductOpen(false);
+    // Reload products after adding
+    dispatch(getAllProducts());
+  };
 
-  const filteredData = stockData.filter(
-    (item) =>
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.category.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+  const filteredData = (productsFromRedux || []).filter((item) =>
+    item.name.toLowerCase().includes(searchTerm.toLowerCase()),
+  );
 
   // Calculate Stats
-  const totalProducts = stockData.length
-  const lowStockCount = stockData.filter((i) => i.status === 'Low Stock').length
-  const outOfStockCount = stockData.filter((i) => i.status === 'Out of Stock').length
-  const totalValue = stockData.reduce((acc, item) => acc + item.price * item.quantity, 0)
+  const totalProducts = (productsFromRedux || []).length;
+  const lowStockCount = (productsFromRedux || []).filter(
+    (i) => i.quantity > 0 && i.quantity <= i.minimumStock,
+  ).length;
+  const outOfStockCount = (productsFromRedux || []).filter(
+    (i) => i.quantity === 0,
+  ).length;
+  const totalValue = (productsFromRedux || []).reduce(
+    (acc, item) => acc + item.price * item.quantity,
+    0,
+  );
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Inventory management</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Inventory management
+          </h1>
           <p className="text-sm text-gray-500">
             Manage parts inventory, reorder levels, and suppliers
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline">Import CSV</Button>
-          <Button leftIcon={<Plus className="h-4 w-4" /> } onClick={() => setIsAddProductOpen(true)}>Add Product</Button>
+          <Button
+            leftIcon={<Plus className="h-4 w-4" />}
+            onClick={() => setIsAddProductOpen(true)}
+          >
+            Add Product
+          </Button>
         </div>
       </div>
 
@@ -207,7 +149,7 @@ export function StockManagementPage() {
             <tbody className="divide-y divide-gray-100">
               {filteredData.map((item) => (
                 <tr
-                  key={item.id}
+                  key={item._id}
                   className="group hover:bg-gray-50/50 transition-colors"
                 >
                   <td className="px-6 py-4">
@@ -217,38 +159,46 @@ export function StockManagementPage() {
                       </div>
                       <div>
                         <p className="font-medium text-gray-900">{item.name}</p>
-                        <p className="text-xs text-gray-500">SKU: {item.sku}</p>
+                        <p className="text-xs text-gray-500">{item.supplierName}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-gray-600">{item.category}</td>
-                  <td className="px-6 py-4 font-medium text-gray-900">
-                    ${item.price.toFixed(2)}
+                  <td className="px-6 py-4 text-gray-600">
+                    {item.categoryName}
                   </td>
                   <td className="px-6 py-4 font-medium text-gray-900">
-                    {item.stock}
+                  Rs {item.price.toFixed(2)}
+                  </td>
+                  <td className="px-6 py-4 font-medium text-gray-900">
+                    {item.initialStock}
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
                       <span className="text-gray-900">{item.quantity}</span>
-                      {/* <span className="text-xs text-gray-400">/ {item.minLevel}</span> */}
+                      <span className="text-xs text-gray-400">
+                        / {item.initialStock}
+                      </span>
                     </div>
                     {/* Simple progress bar for stock level visualization */}
                     <div className="mt-1 h-1.5 w-24 rounded-full bg-gray-100">
                       <div
                         className={`h-1.5 rounded-full ${
-                            item.quantity === 0
-                              ? 'bg-red-500'
-                              : item.quantity <= item.minLevel
-                                ? 'bg-amber-500'
-                                : 'bg-emerald-500'
-                          }
+                          item.quantity === 0
+                            ? "bg-red-500"
+                            : item.quantity <= item.minimumStock
+                              ? "bg-amber-500"
+                              : "bg-emerald-500"
+                        }
                         }`}
-                        style={{ width: `${Math.min((item.quantity / (item.minLevel * 2)) * 100, 100)}%` }}
+                        style={{
+                          width: `${Math.min((item.quantity / item.initialStock) * 100, 100)}%`,
+                        }}
                       />
                     </div>
                   </td>
-                  <td className="px-6 py-4">{getStatusBadge(item.status)}</td>
+                  <td className="px-6 py-4">
+                    {getStatusBadge(item.quantity, item.minimumStock)}
+                  </td>
                   <td className="px-6 py-4 text-right">
                     <button className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
                       <MoreHorizontal className="h-4 w-4" />
@@ -263,8 +213,8 @@ export function StockManagementPage() {
         {/* Pagination */}
         <div className="flex items-center justify-between border-t border-gray-100 px-6 py-4">
           <p className="text-xs text-gray-500">
-            Showing <span className="font-medium">1-{filteredData.length}</span> of{' '}
-            <span className="font-medium">{stockData.length}</span> results
+            Showing <span className="font-medium">1-{filteredData.length}</span>{" "}
+            of <span className="font-medium">{totalProducts}</span> results
           </p>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" disabled>
@@ -283,5 +233,5 @@ export function StockManagementPage() {
         onAddProduct={handleAddProduct}
       />
     </div>
-  )
+  );
 }

@@ -26,7 +26,7 @@ const navItems = [
     icon: BarChart3,
   },
   {
-    path: '/dashboard/inventory',
+    path: '/dashboard/service-orders-list',
     label: 'Repair History',
     icon: Car,
   },

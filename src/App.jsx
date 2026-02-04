@@ -4,13 +4,14 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { LoginPage } from './pages/LoginPage/Login';
 import { DashboardLayout } from './pages/DashboardLayout/DashboardLayout';
 import { OverviewPage } from './pages/OverviewPage/OverviewPage';
-import { InventoryPage } from './pages/InventoryPage/InventoryPage';
+import { ServiceHistoryList } from './pages/InventoryPage/ServiceHistoryList';
 import { AppointmentsPage } from './pages/AppointmentsPage/AppointmentsPage';
 import { RevenuePage } from './pages/RevenuePage/RevenuePage';
 import { StockManagementPage } from './pages/StockManagement/StockManagementPage';
 import { ServiceOrderPage } from './pages/ServiceOrder/ServiceOrderPage';
 import { InvoicePage } from './pages/Invoice/InvoicePage';
 import { EmployeePage } from './pages/Employee/EmployeePage';
+import {ServiceOrderListPage} from './pages/ServiceOrder/ServiceOrderListPage';
 
 export default function App() {
   return <BrowserRouter>
@@ -21,7 +22,7 @@ export default function App() {
         <Route path="/dashboard" element={<DashboardLayout />}>
           <Route index element={<OverviewPage />} />
           <Route path="overview" element={<OverviewPage />} />
-          <Route path="inventory" element={<InventoryPage />} />
+          <Route path="service-orders-list" element={<ServiceHistoryList />} />
           <Route path="appointments" element={<AppointmentsPage />} />
           <Route path="revenue" element={<RevenuePage />} />
            <Route path="stock" element={<StockManagementPage />} />
