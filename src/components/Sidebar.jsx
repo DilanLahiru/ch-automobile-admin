@@ -50,6 +50,11 @@ const navItems = [
     label: 'Employees',
     icon: Package,
   },
+  {
+    path: '/dashboard/settings',
+    label: 'Settings',
+    icon: Settings,
+  },
   
 ]
 
@@ -106,10 +111,6 @@ export function Sidebar() {
 
         {/* Bottom Actions */}
         <div className="mt-auto border-t border-gray-100 pt-4 space-y-1">
-          <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900">
-            <Settings className="h-5 w-5 text-gray-400" />
-            Settings
-          </button>
           <NavLink
             to="/"
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"

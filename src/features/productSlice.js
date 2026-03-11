@@ -28,11 +28,13 @@ export const createProduct = createAsyncThunk(
     try {
       const response = await axios.post(`${baseUrl}${API_PATH.PRODUCT.CREATE}`, productData, {
         headers: {
-          "Content-Type": "application/json",
-        },
+          "Content-Type": "application/json",          Authorization: `Bearer ${localStorage.getItem("token")}`,        },
       });
       return response.data;
     } catch (error) {
+      console.log('====================================');
+      console.log(error);
+      console.log('====================================');
       return rejectWithValue(error.response?.data?.message || "Failed to create product");
     }
   }

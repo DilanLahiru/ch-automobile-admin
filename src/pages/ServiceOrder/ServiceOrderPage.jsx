@@ -944,6 +944,9 @@ export function ServiceOrderPage() {
   useEffect(() => {
     if (appointmentsFromRedux && appointmentsFromRedux.length > 0) {
       const vehicles = processAvailableVehicles(appointmentsFromRedux);
+      console.log('====================================');
+      console.log(vehicles);
+      console.log('====================================');
       setAvailableVehicles(vehicles);
     }
   }, [appointmentsFromRedux]);
@@ -1009,7 +1012,7 @@ export function ServiceOrderPage() {
 
     // only include status accepted appointments for now
     appointments.forEach((appt) => {
-      if (appt.vehicleNumber && appt.status === "accepted") {
+      if (appt.vehicleNumber && appt.status === "confirmed") {
         if (!uniqueVehicles.has(appt.vehicleNumber)) {
           uniqueVehicles.set(appt.vehicleNumber, {
             appointmentId: appt._id,
@@ -1264,9 +1267,6 @@ export function ServiceOrderPage() {
       (v) => v.vehicleNumber === currentRepair.vehicleNumber,
     );
 
-    console.log("current vehicle: ", currentVehicle);
-    
-
     // Prepare order data with only the current repair
     const orderData = {
       appointmentId: currentVehicle?.appointmentId,
@@ -1285,34 +1285,31 @@ export function ServiceOrderPage() {
       totalAmount: calculateRepairTotal(currentRepair),
     };
 
-    console.log(orderData);
-
     try {
-      const result = dispatch(createServiceOrder(orderData)).unwrap();
-      if (result.payload) {
-        toast.success("Service order created successfully!");
-    
-        // Remove the current repair from the repairs array
-        const updatedRepairs = repairs.filter((_, idx) => idx !== currentRepairIndex);
-    
-        if (updatedRepairs.length > 0) {
-          setRepairs(updatedRepairs);
-          setCurrentRepairIndex(Math.max(0, currentRepairIndex - 1));
-          toast.info("Remaining repairs are still in draft");
-        } else {
-          // No more repairs, clear everything
-          localStorage.removeItem("serviceOrderDraft");
-          initializeNewRepair();
-        }
-    
-        // Navigate to invoices
-        navigate("/dashboard/invoices/new", {
-          state: { serviceOrder: result.payload },
-        });
+      const result = await dispatch(createServiceOrder(orderData)).unwrap();
+      
+      // Success handling
+      toast.success(`✓ Repair Completed!\nVehicle: ${currentRepair.vehicleNumber}\nTotal: Rs. ${calculateRepairTotal(currentRepair).toFixed(2)}`);
+  
+      // Remove the current repair from the repairs array
+      const updatedRepairs = repairs.filter((_, idx) => idx !== currentRepairIndex);
+  
+      if (updatedRepairs.length > 0) {
+        setRepairs(updatedRepairs);
+        setCurrentRepairIndex(Math.max(0, currentRepairIndex - 1));
+      } else {
+        // No more repairs, clear everything
+        localStorage.removeItem("serviceOrderDraft");
+        initializeNewRepair();
       }
+  
+      // Refresh the page after success toast has time to display
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
     } catch (error) {
       toast.error("Failed to create service order");
-      console.log("Create service order error:", error);
+      console.error("Create service order error:", error);
     }
   };
 
@@ -1328,7 +1325,18 @@ export function ServiceOrderPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="relative space-y-6">
+      {/* Full-page loading overlay for service order creation */}
+      {isLoadingServiceOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-8 text-center shadow-xl">
+            <Clock className="h-12 w-12 text-blue-600 animate-spin mx-auto mb-4" />
+            <p className="text-lg font-semibold text-gray-900">Completing Service Order</p>
+            <p className="text-sm text-gray-600 mt-2">Please wait while we process your request...</p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -1791,9 +1799,7 @@ export function ServiceOrderPage() {
                   disabled={isLoadingServiceOrder || repairs.length === 0}
                   rightIcon={<ArrowRight className="h-4 w-4" />}
                 >
-                  {isLoadingServiceOrder
-                    ? "Completing..."
-                    : "Complete Repair"}
+                  Complete Repair
                 </Button>
                 <Button
                   variant="secondary"

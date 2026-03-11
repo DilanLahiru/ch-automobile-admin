@@ -1,5 +1,5 @@
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -7,24 +7,221 @@
 
 @layer base {
   body {
-    @apply font-sans text-gray-900 antialiased bg-gray-50;
+    @apply font-sans text-slate-700 antialiased bg-slate-100;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  html {
+    scroll-behavior: smooth;
   }
 }
 
-/* Custom scrollbar for webkit browsers */
+/* Neumorphic Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-transparent;
+  @apply bg-slate-100;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-gray-300 rounded-full;
+  @apply bg-slate-300 rounded-full shadow-neumorphic-sm transition-all duration-200;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-400;
+  @apply bg-slate-400;
+}
+
+/* Firefox Scrollbar */
+* {
+  scrollbar-color: #cbd5e1 #f1f5f9;
+  scrollbar-width: thin;
+}
+
+/* Text Selection - Neumorphic */
+::selection {
+  @apply bg-blue-300 text-slate-900;
+}
+
+::-moz-selection {
+  @apply bg-blue-300 text-slate-900;
+}
+
+/* Smooth transitions globally */
+@layer components {
+  /* Button base styling */
+  button {
+    @apply transition-all duration-300 ease-out;
+  }
+  
+  /* Input fields neumorphic styling */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="search"],
+  textarea,
+  select {
+    @apply transition-all duration-300;
+  }
+  
+  /* Focus styles */
+  input:focus,
+  textarea:focus,
+  select:focus {
+    @apply outline-none;
+  }
+  
+  /* Link hover effects */
+  a {
+    @apply relative transition-all duration-300 text-blue-600 hover:text-blue-700;
+  }
+  
+  /* Neumorphic input focus state */
+  .input-neumorphic:focus {
+    @apply shadow-neumorphic-press;
+  }
+  
+  /* Card with hover effects */
+  .card {
+    @apply rounded-3xl bg-slate-100 shadow-neumorphic transition-all duration-300 hover:shadow-neumorphic-lg hover:-translate-y-2;
+  }
+  
+  /* Badge styling */
+  .badge {
+    @apply inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 shadow-neumorphic-sm;
+  }
+  
+  .badge-success {
+    @apply bg-green-50 text-green-700;
+  }
+  
+  .badge-error {
+    @apply bg-red-50 text-red-700;
+  }
+  
+  .badge-warning {
+    @apply bg-amber-50 text-amber-700;
+  }
+  
+  .badge-info {
+    @apply bg-blue-50 text-blue-700;
+  }
+  
+  /* Neumorphic shadow effects */
+  .shadow-neo {
+    @apply shadow-neumorphic;
+  }
+  
+  .shadow-neo-lg {
+    @apply shadow-neumorphic-lg;
+  }
+  
+  .shadow-neo-inset {
+    @apply shadow-neumorphic-inset;
+  }
+  
+  /* Hover lift animation */
+  .hover-lift {
+    @apply transition-all duration-300;
+  }
+  
+  .hover-lift:hover {
+    @apply -translate-y-2 shadow-neumorphic-lg;
+  }
+}
+
+/* Loading skeleton animation */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.skeleton-loading {
+  @apply bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200;
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* Smooth page transitions */
+@keyframes fadeInPage {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-enter {
+  animation: fadeInPage 0.6s ease-out;
+}
+
+/* Floating animation */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Subtle bounce */
+@keyframes bounceSubtle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.bounce-subtle {
+  animation: bounceSubtle 2s ease-in-out infinite;
+}
+
+/* Pulse slow animation */
+@keyframes pulseSlow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.pulse-slow {
+  animation: pulseSlow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Disabled state */
+.disabled-state {
+  @apply opacity-60 cursor-not-allowed;
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

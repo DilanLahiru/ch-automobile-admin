@@ -68,7 +68,7 @@ export function StockManagementPage() {
   };
 
   const filteredData = (productsFromRedux || []).filter((item) =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()),
+    item?.name?.toLowerCase?.()?.includes(searchTerm.toLowerCase()) || false,
   );
 
   // Calculate Stats

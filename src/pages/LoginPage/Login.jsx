@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Wrench, Mail, Lock, ArrowRight, Car, Gauge } from 'lucide-react';
 import { useNavigate } from 'react-router-dom'
+import userLogin from '../../assets/logo.png'
 
 export function LoginPage() {
   const navigate = useNavigate()
@@ -20,65 +21,8 @@ export function LoginPage() {
   return (
     <div className="relative flex min-h-screen overflow-hidden">
       {/* Left side - Branding */}
-      <div className="relative hidden w-1/2 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 lg:flex lg:flex-col lg:justify-between">
-        {/* Animated background elements */}
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute left-10 top-20 h-72 w-72 rounded-full bg-blue-500 blur-3xl animate-pulse" />
-          <div className="absolute bottom-20 right-10 h-96 w-96 rounded-full bg-orange-500 blur-3xl animate-pulse" />
-        </div>
-        
-        {/* Animated grid pattern */}
-        <div className="absolute inset-0 opacity-5">
-          <div className="h-full w-full" style={{
-            backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
-            backgroundSize: '50px 50px'
-          }} />
-        </div>
-
-        <div className="relative z-10 p-12">
-          <div className="flex items-center space-x-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/50">
-              <Wrench className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-white">CH AutoMobile</h1>
-              <p className="text-sm text-slate-200">Vehicle Repair Management</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="relative z-10 p-12">
-          <div className="space-y-6">
-            <div className="inline-flex items-center space-x-2 rounded-full bg-blue-500/10 px-4 py-2 backdrop-blur-sm">
-              <Gauge className="h-4 w-4 text-blue-400" />
-              <span className="text-sm font-medium text-blue-300">Dashboard Analytics</span>
-            </div>
-            <h2 className="text-4xl font-bold leading-tight text-white">
-              Streamline Your<br />
-              Workshop Operations
-            </h2>
-            <p className="text-lg text-slate-400">
-              Manage repairs, track inventory, and keep your customers satisfied with our comprehensive admin platform.
-            </p>
-          </div>
-
-          {/* Feature highlights */}
-          <div className="mt-12 grid grid-cols-2 gap-6">
-            <div className="rounded-2xl border border-slate-700/50 bg-slate-800/30 p-4 backdrop-blur-sm">
-              <div className="mb-2 text-3xl font-bold text-white">2.4k+</div>
-              <div className="text-sm text-slate-400">Repairs Completed</div>
-            </div>
-            <div className="rounded-2xl border border-slate-700/50 bg-slate-800/30 p-4 backdrop-blur-sm">
-              <div className="mb-2 text-3xl font-bold text-white">98%</div>
-              <div className="text-sm text-slate-400">Customer Satisfaction</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Decorative car illustration */}
-        <div className="absolute bottom-0 left-0 right-0 opacity-5">
-          <Car className="mx-auto h-64 w-64" />
-        </div>
+      <div className="relative hidden w-1/2 bg-white items-center justify-center p-8 flex-col lg:flex lg:w-1/2">
+        <img src={userLogin} alt="user login" className="w-fit" />
       </div>
 
       {/* Right side - Login Form */}
@@ -96,7 +40,7 @@ export function LoginPage() {
           </div>
 
           <div className="mb-8">
-            <h2 className="text-3xl font-bold text-slate-900">Welcome Back</h2>
+            <h2 className="text-3xl font-bold text-cyan-800 uppercase font-serif">Welcome Back</h2>
             <p className="mt-2 text-slate-600">
               Sign in to access your admin dashboard
             </p>
@@ -109,7 +53,7 @@ export function LoginPage() {
               </label>
               <div className="relative">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
-                  <Mail className="h-5 w-5 text-slate-400" />
+                  <Mail className="h-5 w-5 text-cyan-800" />
                 </div>
                 <input
                   type="email"
@@ -129,14 +73,14 @@ export function LoginPage() {
                 </label>
                 <a
                   href="#"
-                  className="text-sm font-medium text-blue-600 transition-colors hover:text-blue-700"
+                  className="text-sm font-medium text-cyan-600 transition-colors hover:text-cyan-800"
                 >
                   Forgot password?
                 </a>
               </div>
               <div className="relative">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
-                  <Lock className="h-5 w-5 text-slate-400" />
+                  <Lock className="h-5 w-5 text-cyan-800" />
                 </div>
                 <input
                   type="password"
@@ -164,7 +108,7 @@ export function LoginPage() {
               type="button"
               onClick={handleLogin}
               disabled={isLoading}
-              className="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-3.5 font-semibold text-white shadow-lg shadow-blue-500/30 transition-all hover:shadow-xl hover:shadow-blue-500/40 disabled:opacity-50"
+              className="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-cyan-600 to-cyan-800 px-6 py-3.5 font-semibold text-white shadow-lg shadow-blue-500/30 transition-all hover:shadow-xl hover:shadow-blue-500/40 disabled:opacity-50"
             >
               <span className="relative z-10 flex items-center justify-center">
                 {isLoading ? (
@@ -182,7 +126,7 @@ export function LoginPage() {
                   </>
                 )}
               </span>
-              <div className="absolute inset-0 -z-10 bg-gradient-to-r from-blue-700 to-blue-800 opacity-0 transition-opacity group-hover:opacity-100" />
+              <div className="absolute inset-0 -z-10 bg-gradient-to-r from-cyan-400 to-cyan-700 opacity-0 transition-opacity group-hover:opacity-100" />
             </button>
           </div>
 
@@ -190,11 +134,11 @@ export function LoginPage() {
             Need help?{' '}
             <a
               href="#"
-              className="font-medium text-blue-600 transition-colors hover:text-blue-700"
+              className="font-medium text-cyan-700 transition-colors hover:text-cyan-900"
             >
               Contact Support
             </a>
-          </p>
+          </p>  
         </div>
       </div>
     </div>

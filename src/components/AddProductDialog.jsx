@@ -21,6 +21,7 @@ import { Dialog } from './ui/Dialog'
 import { useDispatch, useSelector } from "react-redux";
 import { getAllCategories } from "../features/categorySlice";
 import { getAllSuppliers } from "../features/supplierSlice";
+import { createProduct } from "../features/productSlice";
 
 // Category options
 // const categories = [
@@ -167,42 +168,44 @@ export function AddProductDialog({ open, onClose, onAddProduct }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
     
-    if (!validateForm()) {
-      return
-    }
+    // if (!validateForm()) {
+    //   return
+    // }
 
     setIsSubmitting(true)
 
     try {
       // Prepare product data
       const productData = {
-        ...formData,
+        name: formData.name,
+        categoryId: formData.category,
+        supplierId: formData.supplier,
         price: parseFloat(formData.price),
-        cost: parseFloat(formData.cost),
-        stock: parseInt(formData.stock) || 0,
-        minLevel: parseInt(formData.minLevel) || 0,
-        weight: formData.weight ? parseFloat(formData.weight) : null,
-        status: formData.trackInventory 
-          ? (parseInt(formData.stock) <= parseInt(formData.minLevel) 
-            ? 'Low Stock' 
-            : 'In Stock')
-          : 'Not Tracked',
-        addedDate: new Date().toISOString(),
+        initialStock: parseInt(formData.stock) || 0,
+        minimumStock: parseInt(formData.minLevel) || 0,
+        quantity: parseInt(formData.unit) || 0,
+        // trackInventory: formData.trackInventory,
+        // notifyLowStock: formData.notifyLowStock,
+        // status: formData.trackInventory 
+        //   ? (parseInt(formData.stock) <= parseInt(formData.minLevel) 
+        //     ? 'Low Stock' 
+        //     : 'In Stock')
+        //   : 'Not Tracked',
+        // addedDate: new Date().toISOString(),
       }
 
       // Here you would typically make an API call
       console.log('Adding product:', productData)
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const result = dispatch(createProduct(productData)); 
       
-      // Call the callback function
-      if (onAddProduct) {
-        onAddProduct(productData)
+      if (createProduct.fulfilled.match(result)) {
+        // Reset form and close dialog only on success
+        handleClose()
+        onAddProduct && onAddProduct(result.payload)
+      } else if (createProduct.rejected.match(result)) {
+        setErrors(prev => ({ ...prev, submit: result.payload || 'Failed to add product' }))
       }
-      
-      // Reset form and close dialog
-      handleClose()
       
     } catch (error) {
       console.error('Error adding product:', error)

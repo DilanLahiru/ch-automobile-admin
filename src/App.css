@@ -1,3 +1,18 @@
+/* ===========================
+   NEUMORPHIC DESIGN SYSTEM
+   =========================== */
+
+/* Smooth transitions for all interactive elements */
+* {
+  @apply transition-all duration-300 ease-out;
+}
+
+/* Remove default transition for elements that shouldn't animate */
+select,
+textarea {
+  @apply !transition-none;
+}
+
 #root {
   max-width: 1280px;
   margin: 0 auto;
@@ -5,38 +20,198 @@
   text-align: center;
 }
 
+/* ===========================
+   NEUMORPHIC COMPONENTS
+   =========================== */
+
+/* Base neumorphic element */
+.neumorphic-base {
+  @apply bg-slate-100;
+}
+
+/* Neumorphic raised card */
+.neumorphic-card {
+  @apply bg-slate-100 rounded-3xl shadow-neumorphic transition-all duration-300;
+}
+
+.neumorphic-card:hover {
+  @apply shadow-neumorphic-lg;
+}
+
+/* Neumorphic inset input/button state */
+.neumorphic-inset {
+  @apply bg-slate-100 rounded-3xl shadow-neumorphic-inset;
+}
+
+/* Neumorphic pressed state */
+.neumorphic-press {
+  @apply bg-slate-100 rounded-3xl shadow-neumorphic-press;
+}
+
+/* ===========================
+   NEUMORPHIC BUTTONS
+   =========================== */
+
+.btn-neumorphic {
+  @apply relative px-6 py-3 rounded-2xl bg-slate-100 shadow-neumorphic-sm font-semibold text-slate-800 transition-all duration-300 active:shadow-neumorphic-inset active:text-slate-900;
+}
+
+.btn-neumorphic:hover {
+  @apply shadow-neumorphic;
+}
+
+.btn-neumorphic-primary {
+  @apply bg-gradient-to-br from-blue-100 to-blue-50 text-blue-700 shadow-neumorphic-sm hover:shadow-neumorphic active:shadow-neumorphic-press;
+}
+
+.btn-neumorphic-accent {
+  @apply px-6 py-3 rounded-2xl bg-slate-100 shadow-neumorphic-sm font-semibold text-slate-900 transition-all duration-300 active:shadow-neumorphic-press hover:shadow-neumorphic;
+}
+
+/* ===========================
+   NEUMORPHIC INPUTS
+   =========================== */
+
+.input-neumorphic {
+  @apply w-full px-6 py-3 rounded-2xl bg-slate-100 shadow-neumorphic-inset border-0 text-slate-900 placeholder-slate-500 transition-all duration-300;
+}
+
+.input-neumorphic:focus {
+  @apply outline-none shadow-neumorphic-press;
+}
+
+/* ===========================
+   SMOOTH PAGE TRANSITIONS
+   =========================== */
+.page-enter {
+  @apply animate-fade-in-up;
+}
+
+.page-exit {
+  @apply animate-fade-in;
+}
+
+/* ===========================
+   NEUMORPHIC CARD
+   =========================== */
+.card {
+  @apply rounded-3xl bg-slate-100 shadow-neumorphic transition-all duration-300 hover:shadow-neumorphic-lg hover:-translate-y-2 p-6;
+}
+
+/* ===========================
+   SKELETON LOADING
+   =========================== */
+.skeleton-loading {
+  @apply bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200;
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* ===========================
+   NEUMORPHIC HOVER LIFT
+   =========================== */
+.hover-lift {
+  @apply transition-all duration-300;
+}
+
+.hover-lift:hover {
+  @apply -translate-y-2 shadow-neumorphic-lg;
+}
+
+/* ===========================
+   STATUS BADGES NEUMORPHIC
+   =========================== */
+.badge {
+  @apply inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 shadow-neumorphic-sm;
+}
+
+.badge-success {
+  @apply bg-green-50 text-green-700 shadow-neumorphic-sm;
+}
+
+.badge-error {
+  @apply bg-red-50 text-red-700 shadow-neumorphic-sm;
+}
+
+.badge-warning {
+  @apply bg-amber-50 text-amber-700 shadow-neumorphic-sm;
+}
+
+.badge-info {
+  @apply bg-blue-50 text-blue-700 shadow-neumorphic-sm;
+}
+
+/* ===========================
+   MODAL / DIALOG BACKDROP
+   =========================== */
+.modal-backdrop {
+  @apply fixed inset-0 bg-slate-500/40 backdrop-blur-md;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.modal-neumorphic {
+  @apply rounded-3xl bg-slate-100 shadow-neumorphic-lg p-8;
+}
+
+/* ===========================
+   FORM VALIDATION STATES
+   =========================== */
+.input-error {
+  @apply shadow-red-200;
+}
+
+.input-success {
+  @apply shadow-green-200;
+}
+
+.input-disabled {
+  @apply opacity-50 cursor-not-allowed;
+}
+
+/* ===========================
+   RESPONSIVE TYPOGRAPHY
+   =========================== */
+@media (max-width: 768px) {
+  h1 {
+    @apply text-2xl font-bold;
+  }
+  
+  h2 {
+    @apply text-xl font-bold;
+  }
+}
+
+/* ===========================
+   ACCESSIBILITY
+   =========================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ===========================
+   NEUMORPHIC LOGO
+   =========================== */
 .logo {
   height: 6em;
   padding: 1.5em;
   will-change: filter;
   transition: filter 300ms;
 }
+
 .logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.1));
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
+/* ===========================
+   FLOATING DIVIDER
+   =========================== */
+.neumorphic-divider {
+  @apply h-0.5 bg-gradient-to-r from-slate-300 via-slate-200 to-slate-300;
 }
