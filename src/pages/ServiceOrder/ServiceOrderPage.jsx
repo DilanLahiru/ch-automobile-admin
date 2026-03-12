@@ -1010,9 +1010,15 @@ export function ServiceOrderPage() {
     // Filter for unique vehicles and appointments that are ready for service
     const uniqueVehicles = new Map();
 
-    // only include status accepted appointments for now
+    // Get today's date without time component
+    const todayString = new Date().toISOString().split('T')[0];
+
+    // only include status confirmed appointments for today
     appointments.forEach((appt) => {
-      if (appt.vehicleNumber && appt.status === "confirmed") {
+      // Check if appointment is for today and has confirmed status
+      const appointmentDateString = appt.appointmentDate ? appt.appointmentDate.split('T')[0] : null;
+      
+      if (appt.vehicleNumber && appt.status === "confirmed" && appointmentDateString === todayString) {
         if (!uniqueVehicles.has(appt.vehicleNumber)) {
           uniqueVehicles.set(appt.vehicleNumber, {
             appointmentId: appt._id,
@@ -1025,7 +1031,6 @@ export function ServiceOrderPage() {
             customerName:
               appt.customerName || appt.customer?.name || "Unknown Owner",
             customerId: appt.customerId || null,
-            appointmentId: appt._id,
             vehicleId: appt.vehicleId,
           });
         }
