@@ -183,7 +183,11 @@ export function AppointmentsPage() {
           statusColor = 'bg-green-100 border-green-200 text-green-700';
         } else if (apt.status === 'rejected') {
           statusColor = 'bg-red-100 border-red-200 text-red-700';
-        }
+        } else if (apt.status === 'completed') {
+          statusColor = 'bg-blue-100 border-blue-200 text-blue-700';
+        } else if (apt.status === 'cancelled') {
+          statusColor = 'bg-red-50 border-red-200 text-red-700';
+        }  
 
         const serviceTypeId = apt.serviceType?.toLowerCase().replace(/\s+/g, '-') || 'maintenance';
         const matchingService = serviceTypes.find(s => 
@@ -375,6 +379,13 @@ export function AppointmentsPage() {
   }
 
   const handleEditAppointment = (appointment) => {
+    // Prevent editing completed appointments
+    if (appointment.status === 'completed') {
+      toast.error('Cannot edit completed appointments')
+      setShowAppointmentMenu(null)
+      return
+    }
+
     setAppointmentForm({
       id: appointment.id,
       date: selectedDate,
@@ -553,6 +564,11 @@ export function AppointmentsPage() {
       case 'rejected':
         return 'bg-red-50 border-red-200'
       case 'pending':
+        return 'bg-amber-50 border-amber-200'
+      case 'completed':
+        return 'bg-blue-50 border border-blue-200'
+      case 'cancelled':
+        return 'bg-gray-50 border-gray-200'
       default:
         return 'bg-amber-50 border-amber-200'
     }
@@ -565,6 +581,11 @@ export function AppointmentsPage() {
       case 'rejected':
         return 'bg-red-100 text-red-800'
       case 'pending':
+        return 'bg-amber-100 text-amber-800'
+      case 'completed':
+        return 'bg-blue-100 text-blue-800'
+      case 'cancelled':
+        return 'bg-gray-100 text-gray-800'
       default:
         return 'bg-amber-100 text-amber-800'
     }
@@ -621,8 +642,8 @@ export function AppointmentsPage() {
                 <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-3">
                   <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium text-blue-900">Edit Appointment Status</p>
-                    <p className="text-xs text-blue-700 mt-1">You can only change the appointment status. Other details are locked.</p>
+                    <p className="text-sm font-medium text-cyan-900">Edit Appointment Status</p>
+                    <p className="text-xs text-cyan-700 mt-1">You can only change the appointment status. Other details are locked.</p>
                   </div>
                 </div>
               )}
@@ -654,6 +675,13 @@ export function AppointmentsPage() {
                     >
                       <X className="inline h-4 w-4 mr-2 mb-0.5" />
                       Reject
+                    </button>
+                    <button
+                      onClick={() => setAppointmentForm({ ...appointmentForm, status: 'cancelled' })}
+                      className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${appointmentForm.status === 'cancelled' ? 'bg-gray-200 text-gray-900 ring-2 ring-gray-400' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm'}`}
+                    >
+                      <X className="inline h-4 w-4 mr-2 mb-0.5" />
+                      Cancel
                     </button>
                   </div>
                 </div>
@@ -1182,19 +1210,22 @@ export function AppointmentsPage() {
                       </Badge>
                     </div>
                     <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
+                      {app.status !== 'completed' || app.status === 'cancelled' && (
+                        <>
+                        <button
                         onClick={() => setShowAppointmentMenu(showAppointmentMenu === app.id ? null : app.id)}
                         className="p-1 hover:bg-gray-300 rounded-full"
                       >
                         <MoreVertical className="h-4 w-4 text-gray-600" />
                       </button>
-                      {showAppointmentMenu === app.id && (
+                      {showAppointmentMenu === app.id &&  (
                         <div className="absolute right-0 top-8 bg-white border border-gray-300 rounded-lg shadow-lg z-10 w-48">
                           <button
                             onClick={() => handleEditAppointment(app)}
-                            className="w-full px-4 py-2 text-left text-sm hover:bg-blue-50 flex items-center gap-2"
+                            disabled={app.status === 'completed'}
+                            className="w-full px-4 py-2 text-left text-sm flex items-center gap-2"
                           >
-                            <Edit className="h-4 w-4 text-blue-600" />
+                            <Edit className="h-4 w-4 text-cyan-800" />
                             Edit Appointment
                           </button>
                           <button
@@ -1202,13 +1233,17 @@ export function AppointmentsPage() {
                               setShowDeleteConfirm({ id: app.id, customer: app.customer })
                               setShowAppointmentMenu(null)
                             }}
-                            className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 text-red-600 flex items-center gap-2"
+                            disabled={app.status === 'completed'}
+                            className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 text-red-500"
                           >
                             <Trash2 className="h-4 w-4" />
-                            Delete Appointment
+                            Delete
                           </button>
                         </div>
                       )}
+                        </>
+                      )}
+                      
                     </div>
                   </div>
                 ))
@@ -1240,6 +1275,12 @@ export function AppointmentsPage() {
                   {selectedDayAppointments.filter(a => a.status === 'rejected').length}
                 </div>
                 <div className="text-red-600">Rejected</div>
+              </div>
+              <div className="bg-gray-50 p-2 rounded text-center col-span-3">
+                <div className="font-semibold text-gray-700">
+                  {selectedDayAppointments.filter(a => a.status === 'cancelled').length}
+                </div>
+                <div className="text-gray-600">Cancelled</div>
               </div>
             </div>
           </div>
@@ -1286,7 +1327,11 @@ export function AppointmentsPage() {
                       {isBooked && appointment ? (
                         <div
                           className={`rounded-lg border-2 p-4 shadow-sm transition-all hover:shadow-md cursor-pointer relative group/appointment ${appointment.color}`}
-                          onClick={() => handleEditAppointment(appointment)}
+                          onClick={() => {
+                            if (appointment.status !== 'completed') {
+                              handleEditAppointment(appointment)
+                            }
+                          }}
                         >
                           <div className="flex justify-between items-start gap-2">
                             <div className="flex-1 min-w-0">
@@ -1314,15 +1359,17 @@ export function AppointmentsPage() {
                               >
                                 {serviceTypes.find(s => s.id === appointment.type)?.name || appointment.type}
                               </Badge>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setShowAppointmentMenu(showAppointmentMenu === appointment.id ? null : appointment.id)
-                                }}
-                                className="p-1 hover:bg-white/40 rounded opacity-0 group-hover/appointment:opacity-100"
-                              >
-                                <MoreVertical className="h-4 w-4" />
-                              </button>
+                              {appointment.status !== 'completed' && appointment.status !== 'cancelled' && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setShowAppointmentMenu(showAppointmentMenu === appointment.id ? null : appointment.id)
+                                  }}
+                                  className="p-1 hover:bg-white/40 rounded opacity-0 group-hover/appointment:opacity-100"
+                                >
+                                  <MoreVertical className="h-4 w-4" />
+                                </button>
+                              )}
                             </div>
                           </div>
                           {appointment.notes && (
@@ -1337,18 +1384,24 @@ export function AppointmentsPage() {
                                   e.stopPropagation()
                                   handleEditAppointment(appointment)
                                 }}
-                                className="w-full px-4 py-2 text-left text-sm hover:bg-blue-50 flex items-center gap-2 font-medium border-b border-gray-200"
+                                disabled={appointment.status === 'completed'}
+                                className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 font-medium border-b border-gray-200 ${appointment.status === 'completed' ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'hover:bg-blue-50'}`}
                               >
-                                <Edit className="h-4 w-4 text-blue-600" />
+                                <Edit className="h-4 w-4 text-cyan-700" />
                                 Edit Appointment
                               </button>
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation()
+                                  if (appointment.status === 'completed') {
+                                    toast.error('Cannot delete completed appointments')
+                                    return
+                                  }
                                   setShowDeleteConfirm({ id: appointment.id, customer: appointment.customer })
                                   setShowAppointmentMenu(null)
                                 }}
-                                className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 text-red-600 flex items-center gap-2 font-medium"
+                                disabled={appointment.status === 'completed'}
+                                className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 font-medium ${appointment.status === 'completed' ? 'opacity-50 cursor-not-allowed bg-gray-50 text-gray-400' : 'hover:bg-red-50 text-red-600'}`}
                               >
                                 <Trash2 className="h-4 w-4" />
                                 Delete

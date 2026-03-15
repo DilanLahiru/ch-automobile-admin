@@ -1,21 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Wrench, Mail, Lock, ArrowRight, Car, Gauge } from 'lucide-react';
 import { useNavigate } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux';
+import { signinUser, selectAuth } from '../../features/authSlice';
 import userLogin from '../../assets/logo.png'
 
 export function LoginPage() {
   const navigate = useNavigate()
-  const [isLoading, setIsLoading] = useState(false);
+  const dispatch = useDispatch();
+  const { loading: isLoading, error, isAuthenticated } = useSelector(selectAuth);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [validationError, setValidationError] = useState('');
 
-  const handleLogin = (e) => {
+  // Redirect to dashboard if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
+
+  const handleLogin = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-       navigate('/dashboard')
-    }, 1500);
+    setValidationError('');
+
+    // Validate inputs
+    if (!email.trim() || !password.trim()) {
+      setValidationError('Please enter both email and password');
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setValidationError('Please enter a valid email address');
+      return;
+    }
+
+    // Call the signin thunk
+    try {
+      const result = await dispatch(signinUser({ email, password })).unwrap();
+      // Navigation will happen automatically via the useEffect
+    } catch (err) {
+      // Error is handled by the authSlice and displayed below
+      console.error('Login error:', err);
+    }
   };
 
   return (
@@ -46,7 +75,17 @@ export function LoginPage() {
             </p>
           </div>
 
+          {/* Error Messages */}
+          {(validationError || error) && (
+            <div className="mb-6 rounded-lg border border-red-300 bg-red-50 p-4">
+              <p className="text-sm font-medium text-red-800">
+                {validationError || error}
+              </p>
+            </div>
+          )}
+
           <div className="space-y-6">
+            <form onSubmit={handleLogin} className="space-y-6">
             <div>
               <label className="mb-2 block text-sm font-medium text-slate-700">
                 Email Address
@@ -105,8 +144,7 @@ export function LoginPage() {
             </div>
 
             <button
-              type="button"
-              onClick={handleLogin}
+              type="submit"
               disabled={isLoading}
               className="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-cyan-600 to-cyan-800 px-6 py-3.5 font-semibold text-white shadow-lg shadow-blue-500/30 transition-all hover:shadow-xl hover:shadow-blue-500/40 disabled:opacity-50"
             >
@@ -128,6 +166,7 @@ export function LoginPage() {
               </span>
               <div className="absolute inset-0 -z-10 bg-gradient-to-r from-cyan-400 to-cyan-700 opacity-0 transition-opacity group-hover:opacity-100" />
             </button>
+            </form>
           </div>
 
           <p className="mt-8 text-center text-sm text-slate-500">

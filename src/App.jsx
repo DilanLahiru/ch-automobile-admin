@@ -13,6 +13,7 @@ import { InvoicePage } from './pages/Invoice/InvoicePage';
 import { EmployeePage } from './pages/Employee/EmployeePage';
 import {ServiceOrderListPage} from './pages/ServiceOrder/ServiceOrderListPage';
 import { SettingsPage } from './pages/SettingsPage/SettingsPage';
+import ReportPage from './pages/ReportPage/ReportPage';
 
 export default function App() {
   return <BrowserRouter>
@@ -30,6 +31,7 @@ export default function App() {
             <Route path="service-orders" element={<ServiceOrderPage />} />
             <Route path="invoices/new" element={<InvoicePage />} />
             <Route path="employees" element={<EmployeePage />} />
+            <Route path="reports" element={<ReportPage />} />
             <Route path="settings" element={<SettingsPage />} />
         </Route>
 

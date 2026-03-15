@@ -7,6 +7,9 @@ import {
   CheckCircle2,
   Clock,
   Wrench,
+  X,
+  Download,
+  Printer,
 } from "lucide-react";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -59,6 +62,8 @@ export function ServiceHistoryList() {
   );
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredData, setFilteredData] = useState([]);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
 
   useEffect(() => {
     handleLoadAllServiceOrders();
@@ -69,7 +74,7 @@ export function ServiceHistoryList() {
     const filtered = serviceOrders.filter(
       (item) =>
         item.vehicleNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.customerId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        String(item.customerId)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.serviceDescription?.toLowerCase().includes(searchTerm.toLowerCase()),
     );
     setFilteredData(filtered);
@@ -81,6 +86,16 @@ export function ServiceHistoryList() {
     } catch (error) {
       console.error("Error loading service orders:", error);
     }
+  };
+
+  const handleShowInvoice = (order) => {
+    setSelectedOrder(order);
+    setShowInvoiceModal(true);
+  };
+
+  const handleCloseInvoiceModal = () => {
+    setShowInvoiceModal(false);
+    setSelectedOrder(null);
   };
 
   /**
@@ -175,7 +190,7 @@ export function ServiceHistoryList() {
                 <th className="px-6 py-4 font-medium">Parts</th>
                 <th className="px-6 py-4 font-medium text-right">Amount</th>
                 {/* <th className="px-6 py-4 font-medium">Status</th> */}
-                <th className="px-6 py-4 font-medium text-right">Actions</th>
+                {/* <th className="px-6 py-4 font-medium text-right">Actions</th> */}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -257,11 +272,14 @@ export function ServiceHistoryList() {
                     {/* <td className="px-6 py-4">
                       {getStatusBadge(order.status)}
                     </td> */}
-                    <td className="px-6 py-4 text-right">
-                      <button className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600">
+                    {/* <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={() => handleShowInvoice(order)}
+                        className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+                      >
                         <MoreHorizontal className="h-4 w-4" />
                       </button>
-                    </td>
+                    </td> */}
                   </tr>
                 ))
               ) : (

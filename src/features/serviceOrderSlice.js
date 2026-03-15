@@ -86,10 +86,34 @@ export const deleteServiceOrder = createAsyncThunk(
   }
 );
 
+// Load service orders by employee ID
+export const getServiceOrdersByEmployee = createAsyncThunk(
+  "serviceOrder/getServiceOrdersByEmployee",
+  async (employeeId, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`${baseUrl}${API_PATH.SERVICE_ORDER.GET_BY_EMPLOYEE(employeeId)}`, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      console.log('====================================');
+      console.log(response);
+      console.log('====================================');
+      return response.data.serviceHistory || [];
+    } catch (error) {
+      console.log('====================================');
+      console.log(error);
+      console.log('====================================');
+      return rejectWithValue(error.response?.data || "Failed to fetch service orders by employee");
+    }
+  }
+);
+
 const initialState = {
   orders: [],
   isLoading: false,
   error: null,
+  employeeRecords: [], // For storing service orders by employee
 };
 
 export const serviceOrderSlice = createSlice({
@@ -156,6 +180,20 @@ export const serviceOrderSlice = createSlice({
       state.orders = state.orders.filter((order) => order._id !== action.payload);
     });
     builder.addCase(deleteServiceOrder.rejected, (state, action) => {
+      state.isLoading = false;
+      state.error = action.payload;
+    });
+
+    // Get Service Orders by Employee
+    builder.addCase(getServiceOrdersByEmployee.pending, (state) => {
+      state.isLoading = true;
+      state.error = null;
+    });
+    builder.addCase(getServiceOrdersByEmployee.fulfilled, (state, action) => {
+      state.isLoading = false;
+      state.employeeRecords = action.payload;
+    });
+    builder.addCase(getServiceOrdersByEmployee.rejected, (state, action) => {
       state.isLoading = false;
       state.error = action.payload;
     });

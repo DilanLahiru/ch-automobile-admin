@@ -1,10 +1,10 @@
 // Define the base URL for the API
 export const baseUrl = "http://143.20.170.42:3000";
-//export const baseUrl = "http://192.168.8.100:3000";
+//export const baseUrl = "http://192.168.8.102:3000";
 
 export const API_PATH = {
   AUTH: {
-    LOGIN: "/api/employee/login-admin",
+    LOGIN: "/api/user/login",
     REGISTER: "/api/user/register",
     GET_LOGIN_USER: `/api/employee/current`,
   },
@@ -45,6 +45,7 @@ export const API_PATH = {
     UPDATE: "/api/service-record/update",
     DELETE: "/api/service-record/delete",
     GET_BY_ID: (id) => `/api/service-record/${id}`,
+    GET_BY_EMPLOYEE: (employeeId) => `/api/service-record/employee/${employeeId}`,
   },
   INVOICE: {
     CREATE: "/api/invoice/create",

@@ -1,6 +1,7 @@
 
 import React from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { useDispatch } from 'react-redux'
 import {
   LayoutDashboard,
   Car,
@@ -11,8 +12,10 @@ import {
   Wrench,
   Package,
   FileText,
+  TrendingUp,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { logoutUser } from '../features/authSlice'
 
 const navItems = [
   {
@@ -20,11 +23,11 @@ const navItems = [
     label: 'Overview',
     icon: LayoutDashboard,
   },
-  {
-    path: '/dashboard/revenue',
-    label: 'Revenue',
-    icon: BarChart3,
-  },
+  // {
+  //   path: '/dashboard/revenue',
+  //   label: 'Revenue',
+  //   icon: BarChart3,
+  // },
   {
     path: '/dashboard/service-orders-list',
     label: 'Repair History',
@@ -51,6 +54,11 @@ const navItems = [
     icon: Package,
   },
   {
+    path: '/dashboard/reports',
+    label: 'Reports & Analytics',
+    icon: TrendingUp,
+  },
+  {
     path: '/dashboard/settings',
     label: 'Settings',
     icon: Settings,
@@ -60,6 +68,19 @@ const navItems = [
 
 export function Sidebar() {
   const location = useLocation()
+  const navigate = useNavigate()
+  const dispatch = useDispatch()
+
+  const handleLogout = async () => {
+    try {
+      await dispatch(logoutUser()).unwrap()
+      navigate('/')
+    } catch (error) {
+      console.error('Logout failed:', error)
+      // Still redirect to login even if there's an error
+      navigate('/')
+    }
+  }
 
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-gray-200 bg-white shadow-sm">
@@ -111,13 +132,13 @@ export function Sidebar() {
 
         {/* Bottom Actions */}
         <div className="mt-auto border-t border-gray-100 pt-4 space-y-1">
-          <NavLink
-            to="/"
+          <button
+            onClick={handleLogout}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
           >
             <LogOut className="h-5 w-5" />
             Sign Out
-          </NavLink>
+          </button>
         </div>
 
         {/* User Profile Snippet */}
