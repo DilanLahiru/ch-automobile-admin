@@ -8,17 +8,22 @@ export const getAllProducts = createAsyncThunk(
   "product/getAll",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${baseUrl}${API_PATH.PRODUCT.GET_ALL}`, {
-        headers: {
-          "Content-Type": "application/json",
+      const response = await axios.get(
+        `${baseUrl}${API_PATH.PRODUCT.GET_ALL}`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
         },
-      });
+      );
       console.log(response.data);
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || "Failed to fetch product data");
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch product data",
+      );
     }
-  }
+  },
 );
 
 // Async Thunk for Create Product
@@ -26,18 +31,29 @@ export const createProduct = createAsyncThunk(
   "product/create",
   async (productData, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${baseUrl}${API_PATH.PRODUCT.CREATE}`, productData, {
-        headers: {
-          "Content-Type": "application/json",          Authorization: `Bearer ${localStorage.getItem("token")}`,        },
-      });
+      const response = await axios.post(
+        `${baseUrl}${API_PATH.PRODUCT.CREATE}`,
+        productData,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        },
+      );
+      console.log('====================================');
+      console.log(response.data);
+      console.log('====================================');
       return response.data;
     } catch (error) {
-      console.log('====================================');
+      console.log("====================================");
       console.log(error);
-      console.log('====================================');
-      return rejectWithValue(error.response?.data?.message || "Failed to create product");
+      console.log("====================================");
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to create product",
+      );
     }
-  }
+  },
 );
 
 // Async Thunk for Update Product
@@ -45,17 +61,23 @@ export const updateProduct = createAsyncThunk(
   "product/update",
   async (productData, { rejectWithValue }) => {
     try {
-      const response = await axios.put(`${baseUrl}${API_PATH.PRODUCT.UPDATE}`, productData, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+      const response = await axios.put(
+        `${baseUrl}${API_PATH.PRODUCT.UPDATE}`,
+        productData,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
         },
-      });
+      );
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || "Failed to update product");
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to update product",
+      );
     }
-  }
+  },
 );
 
 // Async Thunk for Delete Product
@@ -63,17 +85,22 @@ export const deleteProduct = createAsyncThunk(
   "product/delete",
   async (productId, { rejectWithValue }) => {
     try {
-      const response = await axios.delete(`${baseUrl}${API_PATH.PRODUCT.DELETE}/${productId}`, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
+      const response = await axios.delete(
+        `${baseUrl}${API_PATH.PRODUCT.DELETE}/${productId}`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
         },
-      });
+      );
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || "Failed to delete product");
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to delete product",
+      );
     }
-  }
+  },
 );
 
 // Product Slice
@@ -143,7 +170,9 @@ const productSlice = createSlice({
       })
       .addCase(deleteProduct.fulfilled, (state, action) => {
         state.loading = false;
-        state.products = state.products.filter((product) => product._id !== action.payload._id);
+        state.products = state.products.filter(
+          (product) => product._id !== action.payload._id,
+        );
       })
       .addCase(deleteProduct.rejected, (state, action) => {
         state.loading = false;
@@ -156,4 +185,4 @@ const productSlice = createSlice({
 export const selectProduct = (state) => state.product;
 
 // Export Reducer
-export default productSlice.reducer;    
+export default productSlice.reducer;

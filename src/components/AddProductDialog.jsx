@@ -22,6 +22,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { getAllCategories } from "../features/categorySlice";
 import { getAllSuppliers } from "../features/supplierSlice";
 import { createProduct } from "../features/productSlice";
+import { toast } from "react-toastify";
 
 // Category options
 // const categories = [
@@ -152,7 +153,6 @@ export function AddProductDialog({ open, onClose, onAddProduct }) {
     if (!formData.name.trim()) newErrors.name = 'Product name is required'
     if (!formData.category) newErrors.category = 'Category is required'
     if (!formData.price || parseFloat(formData.price) <= 0) newErrors.price = 'Valid price is required'
-    if (!formData.cost || parseFloat(formData.cost) <= 0) newErrors.cost = 'Valid cost is required'
     if (formData.trackInventory && (!formData.stock || parseInt(formData.stock) < 0)) {
       newErrors.stock = 'Valid stock quantity is required'
     }
@@ -168,9 +168,9 @@ export function AddProductDialog({ open, onClose, onAddProduct }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
     
-    // if (!validateForm()) {
-    //   return
-    // }
+    if (!validateForm()) {
+      return
+    }
 
     setIsSubmitting(true)
 
@@ -184,32 +184,22 @@ export function AddProductDialog({ open, onClose, onAddProduct }) {
         initialStock: parseInt(formData.stock) || 0,
         minimumStock: parseInt(formData.minLevel) || 0,
         quantity: parseInt(formData.unit) || 0,
-        // trackInventory: formData.trackInventory,
-        // notifyLowStock: formData.notifyLowStock,
-        // status: formData.trackInventory 
-        //   ? (parseInt(formData.stock) <= parseInt(formData.minLevel) 
-        //     ? 'Low Stock' 
-        //     : 'In Stock')
-        //   : 'Not Tracked',
-        // addedDate: new Date().toISOString(),
       }
 
-      // Here you would typically make an API call
       console.log('Adding product:', productData)
       
-      const result = dispatch(createProduct(productData)); 
+      const result = await dispatch(createProduct(productData)).unwrap()
       
-      if (createProduct.fulfilled.match(result)) {
-        // Reset form and close dialog only on success
-        handleClose()
-        onAddProduct && onAddProduct(result.payload)
-      } else if (createProduct.rejected.match(result)) {
-        setErrors(prev => ({ ...prev, submit: result.payload || 'Failed to add product' }))
-      }
+      // Reset form and close dialog only on success
+      toast.success('Product added successfully!')
+      handleClose()
+      onAddProduct && onAddProduct(result)
       
     } catch (error) {
-      console.error('Error adding product:', error)
-      setErrors(prev => ({ ...prev, submit: 'Failed to add product. Please try again.' }))
+      console.log('Error adding product:', error)
+      const errorMessage = error || 'Failed to add product. Please try again.'
+      toast.error(errorMessage)
+      setErrors(prev => ({ ...prev, submit: errorMessage }))
     } finally {
       setIsSubmitting(false)
     }

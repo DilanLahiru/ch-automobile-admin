@@ -11,6 +11,7 @@ import { StockManagementPage } from './pages/StockManagement/StockManagementPage
 import { ServiceOrderPage } from './pages/ServiceOrder/ServiceOrderPage';
 import { InvoicePage } from './pages/Invoice/InvoicePage';
 import { EmployeePage } from './pages/Employee/EmployeePage';
+import { SupplierPage } from './pages/Supplier/SupplierPage';
 import {ServiceOrderListPage} from './pages/ServiceOrder/ServiceOrderListPage';
 import { SettingsPage } from './pages/SettingsPage/SettingsPage';
 import ReportPage from './pages/ReportPage/ReportPage';
@@ -31,6 +32,7 @@ export default function App() {
             <Route path="service-orders" element={<ServiceOrderPage />} />
             <Route path="invoices/new" element={<InvoicePage />} />
             <Route path="employees" element={<EmployeePage />} />
+            <Route path="suppliers" element={<SupplierPage />} />
             <Route path="reports" element={<ReportPage />} />
             <Route path="settings" element={<SettingsPage />} />
         </Route>

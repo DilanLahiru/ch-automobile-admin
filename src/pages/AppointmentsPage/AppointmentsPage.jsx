@@ -457,10 +457,7 @@ export function AppointmentsPage() {
         })
       })
       .catch((error) => {
-        console.log('====================================');
-        console.log(error);
-        console.log('====================================');
-        toast.error('Failed to register customer: ' + error.message)
+        toast.error('Something went wrong. Please try again.')
       })
   }
 
@@ -505,7 +502,7 @@ export function AppointmentsPage() {
           }, 1500)
         })
         .catch((error) => {
-          toast.error('Failed to update appointment: ' + error.message)
+          toast.error('Something went wrong. Please try again.')
         })
     } else {
       // Create new appointment
@@ -532,9 +529,6 @@ export function AppointmentsPage() {
           }, 1000)
         })
         .catch((error) => {
-          console.log('====================================');
-          console.log(error);
-          console.log('====================================');S
           toast.error('Something went wrong. Please try again.')
         })
     }

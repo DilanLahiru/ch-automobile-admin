@@ -13,6 +13,7 @@ import {
   Package,
   FileText,
   TrendingUp,
+  Truck,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { logoutUser } from '../features/authSlice'
@@ -52,6 +53,11 @@ const navItems = [
     path: '/dashboard/employees',
     label: 'Employees',
     icon: Package,
+  },
+  {
+    path: '/dashboard/suppliers',
+    label: 'Suppliers',
+    icon: Truck,
   },
   {
     path: '/dashboard/reports',
