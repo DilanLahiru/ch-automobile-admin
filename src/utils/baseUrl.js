@@ -1,6 +1,6 @@
 // Define the base URL for the API
 export const baseUrl = "http://143.20.170.42:3000";
-//export const baseUrl = "http://172.20.10.6:3000";
+//export const baseUrl = "http://192.168.8.101:3000";
 
 export const API_PATH = {
   AUTH: {
@@ -52,5 +52,9 @@ export const API_PATH = {
   INVOICE: {
     CREATE: "/api/invoice/create",
     GET_BY_ORDER: (orderId) => `/api/invoice/order/${orderId}`,
+  },
+  SERVICE_TYPE: {
+    CREATE: "/api/service-type/create",
+    GET_ALL: "/api/service-type/all",
   }
 };

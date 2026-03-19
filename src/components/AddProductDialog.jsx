@@ -19,49 +19,10 @@ import { Switch } from './ui/Switch'
 import { Dialog } from './ui/Dialog'
 
 import { useDispatch, useSelector } from "react-redux";
-import { getAllCategories } from "../features/categorySlice";
+import { getAllCategories, createCategory } from "../features/categorySlice";
 import { getAllSuppliers } from "../features/supplierSlice";
 import { createProduct } from "../features/productSlice";
 import { toast } from "react-toastify";
-
-// Category options
-// const categories = [
-//   { value: 'engine', label: 'Engine Parts' },
-//   { value: 'brake', label: 'Brake System' },
-//   { value: 'electrical', label: 'Electrical' },
-//   { value: 'suspension', label: 'Suspension' },
-//   { value: 'filters', label: 'Filters' },
-//   { value: 'fluids', label: 'Fluids' },
-//   { value: 'ignition', label: 'Ignition' },
-//   { value: 'exhaust', label: 'Exhaust System' },
-//   { value: 'cooling', label: 'Cooling System' },
-//   { value: 'interior', label: 'Interior' },
-//   { value: 'exterior', label: 'Exterior' },
-// ]
-
-// Supplier options
-// const suppliers = [
-//   { value: 'bosch', label: 'Bosch Automotive' },
-//   { value: 'denso', label: 'Denso' },
-//   { value: 'delphi', label: 'Delphi Technologies' },
-//   { value: 'magna', label: 'Magna International' },
-//   { value: 'valeo', label: 'Valeo' },
-//   { value: 'continental', label: 'Continental AG' },
-//   { value: 'mahle', label: 'Mahle' },
-//   { value: 'mann-filter', label: 'MANN-FILTER' },
-//   { value: 'local', label: 'Local Supplier' },
-//   { value: 'other', label: 'Other' },
-// ]
-
-// Unit options
-const units = [
-  { value: 'piece', label: 'Piece' },
-  { value: 'set', label: 'Set' },
-  { value: 'pair', label: 'Pair' },
-  { value: 'liter', label: 'Liter' },
-  { value: 'gallon', label: 'Gallon' },
-  { value: 'box', label: 'Box' },
-]
 
 export function AddProductDialog({ open, onClose, onAddProduct }) {
   const dispatch = useDispatch();
@@ -93,6 +54,9 @@ export function AddProductDialog({ open, onClose, onAddProduct }) {
   const [errors, setErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [imagePreview, setImagePreview] = useState(null)
+  const [showAddCategoryModal, setShowAddCategoryModal] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false)
 
   useEffect(() => {
     handleLoadCategories();
@@ -101,6 +65,29 @@ export function AddProductDialog({ open, onClose, onAddProduct }) {
   const handleLoadCategories = () => {
     dispatch(getAllCategories());
     dispatch(getAllSuppliers());
+  };
+
+  // Handle adding a new category
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) {
+      toast.error('Category name cannot be empty');
+      return;
+    }
+
+    setIsCreatingCategory(true);
+    try {
+      await dispatch(createCategory({ name: newCategoryName })).unwrap();
+      toast.success('Category added successfully!');
+      setNewCategoryName('');
+      setShowAddCategoryModal(false);
+      // Refresh categories list
+      dispatch(getAllCategories());
+    } catch (error) {
+      console.error('Error creating category:', error);
+      toast.error(error || 'Failed to create category');
+    } finally {
+      setIsCreatingCategory(false);
+    }
   };
 
   // Generate SKU based on product name
@@ -345,7 +332,6 @@ export function AddProductDialog({ open, onClose, onAddProduct }) {
               value={formData.price}
               onChange={(e) => handleChange('price', e.target.value)}
               placeholder="Rs 0.00"
-              leftIcon={<DollarSign className="h-4 w-4" />}
               error={errors.price}
               required
             />
@@ -353,14 +339,28 @@ export function AddProductDialog({ open, onClose, onAddProduct }) {
 
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">Category *</label>
-            <Select
-              options={categoriesFromRedux.map(cat => ({ value: cat._id, label: cat.name }))}
-              value={formData.category}
-              onChange={(value) => handleChange('category', value)}
-              placeholder="Select category"
-              error={errors.category}
-              required
-            />
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <Select
+                  options={categoriesFromRedux.map(cat => ({ value: cat._id, label: cat.name }))}
+                  value={formData.category}
+                  onChange={(value) => handleChange('category', value)}
+                  placeholder="Select category"
+                  error={errors.category}
+                  required
+                />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowAddCategoryModal(true)}
+                className="mt-auto"
+                title="Add new category"
+              >
+                <span className="text-lg leading-none">+</span>
+              </Button>
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -498,6 +498,57 @@ export function AddProductDialog({ open, onClose, onAddProduct }) {
           </Button>
         </div>
       </form>
+
+      {/* Add Category Modal */}
+      <Dialog
+        open={showAddCategoryModal}
+        onClose={() => {
+          setShowAddCategoryModal(false);
+          setNewCategoryName('');
+        }}
+        title="Add New Category"
+        description="Enter the name of the new category"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">Category Name *</label>
+            <Input
+              autoFocus
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              placeholder="e.g., Engine Parts"
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handleAddCategory();
+                }
+              }}
+            />
+          </div>
+
+          <div className="flex justify-end gap-3 border-t border-gray-200 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowAddCategoryModal(false);
+                setNewCategoryName('');
+              }}
+              disabled={isCreatingCategory}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              leftIcon={<Tag className="h-4 w-4" />}
+              onClick={handleAddCategory}
+              loading={isCreatingCategory}
+            >
+              {isCreatingCategory ? 'Adding...' : 'Add Category'}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
     </Dialog>
   )
 }

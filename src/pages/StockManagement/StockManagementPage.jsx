@@ -143,7 +143,6 @@ export function StockManagementPage() {
                 <th className="px-6 py-4 font-medium">Stock</th>
                 <th className="px-6 py-4 font-medium">Available Quantity</th>
                 <th className="px-6 py-4 font-medium">Status</th>
-                <th className="px-6 py-4 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -198,11 +197,6 @@ export function StockManagementPage() {
                   </td>
                   <td className="px-6 py-4">
                     {getStatusBadge(item.quantity, item.minimumStock)}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <button className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </button>
                   </td>
                 </tr>
               ))}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import moment from 'moment';
-import { Users, CheckCircle, Clock, DollarSign, FileText, Mail, Wrench, TrendingUp, AlertCircle, Phone } from 'lucide-react';
+import { Users, CheckCircle, Clock, DollarSign, FileText, Mail, Wrench, TrendingUp, AlertCircle, Phone, ChevronDown } from 'lucide-react';
 import { getAllEmployee, getAllEmployee as fetchAllEmployees } from '../../features/employeeSlice';
 import { getAllServiceOrders, getAllServiceOrders as fetchAllServiceOrders, getServiceOrdersByEmployee } from '../../features/serviceOrderSlice';
 import { Card } from '../../components/ui/Card';
@@ -14,8 +14,7 @@ const ReportPage = () => {
   const dispatch = useDispatch();
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-
-  // Fetch employee and service order data from API
+  const [expandedRowId, setExpandedRowId] = useState(null);
   useEffect(() => {
     dispatch(fetchAllEmployees());
   }, [dispatch]);
@@ -278,57 +277,107 @@ const ReportPage = () => {
                   <table className="w-full">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200">
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">ID</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Customer</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Vehicle</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Parts</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Labor</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Status</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Amount</th>
                         <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">Date</th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider"></th>
                       </tr>
                     </thead>
                     <tbody>
                       {employeeServiceOrders.map((order, idx) => (
-                        <tr key={idx} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                          <td className="px-6 py-4 text-sm text-slate-600">
-                            <span className="font-mono bg-slate-100 px-2 py-1 rounded text-xs text-slate-700">
-                              {order._id ? order._id.substring(0, 6) : 'N/A'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="font-medium text-xs text-slate-900">{order.customer?.name || 'N/A'}</div>
-                            <div className="text-xs text-slate-600">{order.customer?.contactNumber || ''}</div>
-                          </td>
-                          <td className="px-6 py-4 text-xs text-slate-900 font-sans font-semibold">
-                            {order.vehicleNumber || 'N/A'}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-300">
-                              {order.partsCount || 0} parts
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-xs text-slate-900 font-semibold">
-                            Rs. {(order.laborCost || 0).toLocaleString()}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${
-                              order.status === 'completed'
-                                ? 'bg-lime-200 text-slate-600 border-lime-600'
-                                : order.status === 'pending'
-                                ? 'bg-slate-100 text-slate-700 border-slate-300'
-                                : 'bg-slate-100 text-slate-600 border-slate-300'
-                            }`}>
-                              {order.status || 'pending'}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-xs font-bold text-slate-900">
-                            Rs. {(order.totalAmount || 0).toLocaleString()}
-                          </td>
-                          <td className="px-6 py-4 text-xs font-medium text-slate-700">
-                            {order.date ? moment(order.date).format('MMM DD, YYYY') : 'N/A'}
-                          </td>
-                        </tr>
+                        <React.Fragment key={idx}>
+                          <tr className="border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer">
+                            
+                            <td className="px-6 py-4">
+                              <div className="font-medium text-xs text-slate-900">{order.customer?.name || 'N/A'}</div>
+                              <div className="text-xs text-slate-600">{order.customer?.contactNumber || ''}</div>
+                            </td>
+                            <td className="px-6 py-4 text-xs text-slate-900 font-sans font-semibold">
+                              {order.vehicleNumber || 'N/A'}
+                            </td>
+                            <td className="px-6 py-4 text-xs text-slate-900 font-semibold">
+                              Rs. {(order.laborCost || 0).toLocaleString()}
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${
+                                order.status === 'completed'
+                                  ? 'bg-lime-200 text-slate-600 border-lime-600'
+                                  : order.status === 'pending'
+                                  ? 'bg-slate-100 text-slate-700 border-slate-300'
+                                  : 'bg-slate-100 text-slate-600 border-slate-300'
+                              }`}>
+                                {order.status || 'pending'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-xs font-bold text-slate-900">
+                              Rs. {(order.totalAmount || 0).toLocaleString()}
+                            </td>
+                            <td className="px-6 py-4 text-xs font-medium text-slate-700">
+                              {order.date ? moment(order.date).format('MMM DD, YYYY') : 'N/A'}
+                            </td>
+                            <td className="px-6 py-4">
+                              <button
+                                onClick={() => setExpandedRowId(expandedRowId === idx ? null : idx)}
+                                className="p-1 hover:bg-slate-200 rounded transition-colors"
+                              >
+                                <ChevronDown
+                                  className={`h-4 w-4 text-slate-600 transition-transform ${
+                                    expandedRowId === idx ? 'rotate-180' : ''
+                                  }`}
+                                />
+                              </button>
+                            </td>
+                          </tr>
+                          
+                          {/* Expanded Row - Parts Details */}
+                          {expandedRowId === idx && (
+                            <tr className="bg-slate-50 border-b border-slate-100">
+                              <td colSpan="7" className="px-6 py-6">
+                                <div className="space-y-4">
+                                  <div>
+                                    <p className="text-sm font-semibold text-slate-900 mb-3">Parts Used</p>
+                                    {order.parts && Array.isArray(order.parts) && order.parts.length > 0 ? (
+                                      <div className="overflow-x-auto border border-slate-300 rounded-lg">
+                                        <table className="w-full text-xs">
+                                          <thead>
+                                            <tr className="bg-slate-100 border-b border-slate-300">
+                                              <th className="px-4 py-2 text-left font-semibold text-slate-700">Part Name</th>
+                                              <th className="px-4 py-2 text-left font-semibold text-slate-700">Quantity</th>
+                                              <th className="px-4 py-2 text-left font-semibold text-slate-700">Price</th>
+                                              <th className="px-4 py-2 text-left font-semibold text-slate-700">Total</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {order.parts.map((part, partIdx) => (
+                                              <tr key={partIdx} className="border-b border-slate-200 hover:bg-slate-100 transition-colors">
+                                                <td className="px-4 py-2 font-medium text-slate-900">{part.name || part}</td>
+                                                <td className="px-4 py-2 text-slate-700">{part.quantity || '-'}</td>
+                                                <td className="px-4 py-2 text-slate-700">Rs. {part.price ? (part.price).toLocaleString() : '-'}</td>
+                                                <td className="px-4 py-2 font-semibold text-slate-900">
+                                                  {part.quantity && part.price ? `Rs. ${(part.quantity * part.price).toLocaleString()}` : '-'}
+                                                </td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    ) : (
+                                      <div className="bg-white border border-slate-200 rounded-lg p-4 text-center">
+                                        <p className="text-xs text-slate-500">No specific parts recorded</p>
+                                        {order.partsCount && (
+                                          <p className="text-xs text-slate-600 mt-2">Total parts: {order.partsCount}</p>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
                       ))}
                     </tbody>
                   </table>

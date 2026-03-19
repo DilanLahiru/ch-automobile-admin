@@ -74,7 +74,7 @@ export function ServiceHistoryList() {
     const filtered = serviceOrders.filter(
       (item) =>
         item.vehicleNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        String(item.customerId)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        String(item.customerId?.name)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.serviceDescription?.toLowerCase().includes(searchTerm.toLowerCase()),
     );
     setFilteredData(filtered);

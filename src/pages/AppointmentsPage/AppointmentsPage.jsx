@@ -36,6 +36,10 @@ import {
   getAllCustomers,
   createCustomer 
 } from '../../features/customerSlice'
+import { 
+  getAllServiceTypes,
+  createServiceType 
+} from '../../features/serviceTypeSlice'
 import { toast } from "react-toastify";
 
 const timeSlots = [
@@ -49,26 +53,6 @@ const timeSlots = [
   '03:00 PM', '03:30 PM',
   '04:00 PM', '04:30 PM',
   '05:00 PM'
-]
-
-const serviceTypes = [
-  { id: 'maintenance', name: 'Maintenance', duration: '1h' },
-  { id: 'repair', name: 'Repair', duration: '2h' },
-  { id: 'inspection', name: 'Inspection', duration: '30m' },
-  { id: 'tire-change', name: 'Tire Change', duration: '1h' },
-  { id: 'oil-change', name: 'Oil Change', duration: '45m' },
-  { id: 'battery-replacement', name: 'Battery Replacement', duration: '1h' },
-  { id: 'transmission-replacement', name: 'Transmission Replacement', duration: '1h' },
-  { id: 'brake-replacement', name: 'Brake Replacement', duration: '1h' },
-  { id: 'fuel-injection', name: 'Fuel Injection', duration: '1h' },
-  { id: 'cooling-system', name: 'Cooling System', duration: '1h' },
-  { id: 'engine-tuning', name: 'Engine Tuning', duration: '1h' },
-  { id: 'air-filter', name: 'Air Filter', duration: '1h' },
-  { id: 'wheel-alignment', name: 'Wheel Alignment', duration: '1h' },
-  { id: 'tire-rotation', name: 'Tire Rotation', duration: '1h' },
-  { id: 'transmission-change', name: 'Transmission Change', duration: '1h' },
-  { id: 'battery-change', name: 'Battery Change', duration: '1h' },
-  { id: 'hybrid-system', name: 'Hybrid System', duration: '1h' },
 ]
 
 const months = [
@@ -93,6 +77,11 @@ export function AppointmentsPage() {
     loading: customersLoading 
   } = useSelector((state) => state.customer);
 
+  const {
+    serviceTypes: serviceTypesFromRedux,
+    loading: serviceTypesLoading
+  } = useSelector((state) => state.serviceType);
+
   // Component state
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
@@ -107,6 +96,12 @@ export function AppointmentsPage() {
   const [showCustomerModal, setShowCustomerModal] = useState(false)
   const [customerSearch, setCustomerSearch] = useState('')
   const [filteredCustomers, setFilteredCustomers] = useState([])
+  
+  // Service Type state
+  const [showServiceTypeModal, setShowServiceTypeModal] = useState(false)
+  const [newServiceTypeName, setNewServiceTypeName] = useState('')
+  const [isCreatingServiceType, setIsCreatingServiceType] = useState(false)
+  const [serviceTypeSearch, setServiceTypeSearch] = useState('')
   
   // Appointment form state
   const [appointmentForm, setAppointmentForm] = useState({
@@ -139,6 +134,7 @@ export function AppointmentsPage() {
   // Load appointments on component mount
   useEffect(() => {
     dispatch(getAllAppointments());
+    dispatch(getAllServiceTypes());
   }, [dispatch]);
 
   // Load customers when booking modal opens
@@ -157,7 +153,7 @@ export function AppointmentsPage() {
     } else {
       const filtered = customersFromRedux.filter(customer => 
         customer.name?.toLowerCase().includes(customerSearch.toLowerCase()) ||
-        customer.contactNumber?.includes(customerSearch) ||
+        (customer.contactNumber?.toString() || "").includes(customerSearch) ||
         customer.email?.toLowerCase().includes(customerSearch.toLowerCase())
       );
       setFilteredCustomers(filtered);
@@ -189,11 +185,8 @@ export function AppointmentsPage() {
           statusColor = 'bg-red-50 border-red-200 text-red-700';
         }  
 
-        const serviceTypeId = apt.serviceType?.toLowerCase().replace(/\s+/g, '-') || 'maintenance';
-        const matchingService = serviceTypes.find(s => 
-          s.id === serviceTypeId || 
-          s.name.toLowerCase() === apt.serviceType?.toLowerCase()
-        );
+        const serviceTypeId = apt.serviceType;
+        const matchingService = serviceTypesFromRedux?.find(s => s._id === serviceTypeId);
 
         transformedAppointments[dateString].push({
           id: apt._id,
@@ -215,7 +208,7 @@ export function AppointmentsPage() {
       
       setAppointments(transformedAppointments);
     }
-  }, [appointmentsFromRedux]);
+  }, [appointmentsFromRedux, serviceTypesFromRedux]);
 
   // Helper functions
   const formatDate = (dateString) => {
@@ -461,6 +454,29 @@ export function AppointmentsPage() {
       })
   }
 
+  const handleAddServiceType = async () => {
+    if (!newServiceTypeName.trim()) {
+      toast.error('Service type name cannot be empty');
+      return;
+    }
+
+    setIsCreatingServiceType(true);
+    try {
+      await dispatch(createServiceType({ name: newServiceTypeName })).unwrap();
+      toast.success('Service type added successfully!');
+      setNewServiceTypeName('');
+      setServiceTypeSearch('');
+      setShowServiceTypeModal(false);
+      // Refresh service types list
+      dispatch(getAllServiceTypes());
+    } catch (error) {
+      console.error('Error creating service type:', error);
+      toast.error(error || 'Failed to create service type');
+    } finally {
+      setIsCreatingServiceType(false);
+    }
+  };
+
   const handleSubmitAppointment = () => {
     if (!appointmentForm.customerId) {
       toast.error('Please select or register a customer first.')
@@ -694,7 +710,7 @@ export function AppointmentsPage() {
                     <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                     <input
                       type="text"
-                      placeholder="Search customers by name, phone, or email..."
+                      placeholder="Search customers by name"
                       className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-slate-900 placeholder-slate-400 text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                       value={customerSearch}
                       onChange={(e) => setCustomerSearch(e.target.value)}
@@ -725,9 +741,9 @@ export function AppointmentsPage() {
                         >
                           <div className="flex items-center justify-between">
                             <div>
-                              <p className="font-medium text-slate-900">{customer.name}</p>
+                              <p className="font-medium text-sm text-slate-900 pb-1">{customer.name}</p>
                               <p className="text-xs text-slate-600">
-                                📞 {customer.contactNumber}
+                                {customer.contactNumber}
                                 {customer.email && ` • ✉️ ${customer.email}`}
                               </p>
                             </div>
@@ -826,28 +842,65 @@ export function AppointmentsPage() {
 
               {/* Service Type */}
               <div>
-                <label className="block text-sm font-bold text-slate-800 mb-3 uppercase tracking-wide">
-                  <Wrench className="inline h-4 w-4 mr-2 text-orange-600" />
-                  Service Type
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {serviceTypes.map((service) => (
-                    <button
-                      key={service.id}
-                      type="button"
-                      disabled={!!editingAppointment}
-                      className={`p-3 rounded-lg border-2 text-sm transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
-                        appointmentForm.serviceType === service.id
-                          ? 'border-blue-500 bg-blue-50 shadow-md ring-2 ring-blue-100'
-                          : 'border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300'
-                      }`}
-                      onClick={() => !editingAppointment && setAppointmentForm({ ...appointmentForm, serviceType: service.id })}
-                    >
-                      <div className="text-left">{service.name}</div>
-                      <div className="text-xs text-slate-500 mt-1">{service.duration}</div>
-                    </button>
-                  ))}
+                <div className="flex items-center justify-between mb-3">
+                  <label className="block text-sm font-bold text-slate-800 uppercase tracking-wide">
+                    <Wrench className="inline h-4 w-4 mr-2 text-orange-600" />
+                    Service Type
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowServiceTypeModal(true)}
+                    disabled={!!editingAppointment}
+                    className="text-xs px-2 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    + Add New
+                  </button>
                 </div>
+
+                {/* Search and Dropdown */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search service types..."
+                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-slate-900 placeholder-slate-400 text-sm"
+                    value={serviceTypeSearch}
+                    onChange={(e) => setServiceTypeSearch(e.target.value)}
+                    disabled={!!editingAppointment}
+                  />
+                  
+                  {/* Dropdown list */}
+                  {serviceTypeSearch && (
+                    <div className="absolute z-50 top-full mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {serviceTypesFromRedux
+                        .filter(st => st.name.toLowerCase().includes(serviceTypeSearch.toLowerCase()))
+                        .map((serviceType) => (
+                          <button
+                            key={serviceType._id}
+                            type="button"
+                            onClick={() => {
+                              setAppointmentForm({ ...appointmentForm, serviceType: serviceType._id });
+                              setServiceTypeSearch('');
+                            }}
+                            disabled={!!editingAppointment}
+                            className="w-full text-left px-4 py-2 hover:bg-blue-50 text-slate-900 text-sm border-b border-slate-100 last:border-b-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {serviceType.name}
+                          </button>
+                        ))}
+                      {serviceTypesFromRedux.filter(st => st.name.toLowerCase().includes(serviceTypeSearch.toLowerCase())).length === 0 && (
+                        <div className="px-4 py-2 text-slate-500 text-sm">No service types found</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Selected Service Type Display */}
+                {appointmentForm.serviceType && (
+                  <div className="mt-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+                    Selected: {serviceTypesFromRedux.find(st => st._id === appointmentForm.serviceType)?.name || 'Unknown'}
+                  </div>
+                )}
               </div>
 
               {/* Additional Notes */}
@@ -984,6 +1037,71 @@ export function AppointmentsPage() {
                     disabled={!customerForm.name || !customerForm.contactNumber || customersLoading}
                   >
                     {customersLoading ? 'Registering...' : 'Register Customer'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Add Service Type Modal */}
+      {showServiceTypeModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold text-slate-900">Add Service Type</h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setShowServiceTypeModal(false)
+                    setNewServiceTypeName('')
+                  }}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-slate-700">
+                    Service Type Name *
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-slate-900"
+                    value={newServiceTypeName}
+                    onChange={(e) => setNewServiceTypeName(e.target.value)}
+                    placeholder="e.g., Engine Repair"
+                    autoFocus
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        handleAddServiceType();
+                      }
+                    }}
+                  />
+                </div>
+                
+                <div className="flex gap-2 pt-4">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setShowServiceTypeModal(false)
+                      setNewServiceTypeName('')
+                    }}
+                    disabled={isCreatingServiceType}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    className="flex-1 bg-orange-600 hover:bg-orange-700"
+                    onClick={handleAddServiceType}
+                    disabled={!newServiceTypeName.trim() || isCreatingServiceType}
+                  >
+                    {isCreatingServiceType ? 'Adding...' : 'Add Service Type'}
                   </Button>
                 </div>
               </div>
@@ -1196,7 +1314,7 @@ export function AppointmentsPage() {
                           {app.vehicleModel}
                         </p>
                         <p className="text-xs font-medium text-gray-700 truncate mt-0.5">
-                          {serviceTypes.find(s => s.id === app.type)?.name || app.type}
+                          {serviceTypesFromRedux.find(s => s._id === app.type)?.name || app.type}
                         </p>
                       </div>
                       <Badge variant="neutral" className="text-xs whitespace-nowrap">
@@ -1351,7 +1469,7 @@ export function AppointmentsPage() {
                                 variant="neutral"
                                 className="bg-white/50 border-transparent text-current text-[10px] whitespace-nowrap"
                               >
-                                {serviceTypes.find(s => s.id === appointment.type)?.name || appointment.type}
+                                {serviceTypesFromRedux.find(s => s._id === appointment.type)?.name || appointment.type}
                               </Badge>
                               {appointment.status !== 'completed' && appointment.status !== 'cancelled' && (
                                 <button
