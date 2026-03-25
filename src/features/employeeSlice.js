@@ -43,23 +43,40 @@ export const createEmployee = createAsyncThunk(
 // Async thunk to update an employee
 export const updateEmployee = createAsyncThunk(
   "employee/updateEmployee",
-  async (employee, { dispatch }) => {
-    const response = await axios.put(
-      baseUrl + API_PATH.EMLOYEE.UPDATE,
-      employee
-    );
-    dispatch(getAllEmployee());
-    return response.data;
+  async (employee, { dispatch, rejectWithValue }) => {
+    try {
+      const response = await axios.put(`${baseUrl}${API_PATH.EMLOYEE.UPDATE(employee._id)}`, employee, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      dispatch(getAllEmployee());
+      return response.data;
+    } catch (error) {
+      console.log("Update employee error:", error);
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || "Failed to update employee";
+      return rejectWithValue(errorMessage);
+    }
   }
 );
 
 // Async thunk to delete an employee
 export const deleteEmployee = createAsyncThunk(
   "employee/deleteEmployee",
-  async (employeeId, { dispatch }) => {
-    await axios.delete(baseUrl + API_PATH.EMLOYEE.DELETE + `/${employeeId}`);
-    dispatch(getAllEmployee());
-    return employeeId;
+  async (employeeId, { dispatch, rejectWithValue }) => {
+    try {
+      await axios.delete(`${baseUrl}${API_PATH.EMLOYEE.DELETE(employeeId)}`, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      dispatch(getAllEmployee());
+      return employeeId;
+    } catch (error) {
+      console.log("Delete employee error:", error);
+      const errorMessage = error.response?.data?.message || error.response?.data?.error || "Failed to delete employee";
+      return rejectWithValue(errorMessage);
+    }
   }
 );
 

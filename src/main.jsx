@@ -17,7 +17,7 @@ createRoot(document.getElementById("root")).render(
   <Provider store={store}>
     <StrictMode>
       <App />
-      <ToastContainer className="toast-container text-xs uppercase" position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop={false} closeOnClick closeButton={false} />
+      <ToastContainer className="toast-container text-xs uppercase" position="top-right" autoClose={1500} hideProgressBar={false} newestOnTop={false} closeOnClick closeButton={false} />
     </StrictMode>
   </Provider>
 );

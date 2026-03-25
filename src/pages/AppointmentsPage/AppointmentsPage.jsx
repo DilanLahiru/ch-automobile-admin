@@ -117,6 +117,7 @@ export function AppointmentsPage() {
     serviceType: '',
     notes: '',
     status: 'pending',
+    rejectionReason: '',
   })
   
   // Customer form state
@@ -202,6 +203,7 @@ export function AppointmentsPage() {
           email: apt.email || '',
           notes: apt.note || '',
           status: apt.status || 'pending',
+          reasonForRejection: apt.rejectionReason || '',
           createdBy: 'admin',
         });
       });
@@ -366,6 +368,7 @@ export function AppointmentsPage() {
       serviceType: '',
       notes: '',
       status: 'pending',
+      rejectionReason: '',
     })
     setEditingAppointment(null)
     setShowBookingModal(true)
@@ -392,6 +395,7 @@ export function AppointmentsPage() {
       serviceType: appointment.type,
       notes: appointment.notes || '',
       status: appointment.status || 'pending',
+      reasonForRejection: appointment.rejectionReason || '',
       createdBy: 'admin',
     })
     setEditingAppointment(appointment)
@@ -488,6 +492,11 @@ export function AppointmentsPage() {
       return
     }
 
+    if (appointmentForm.status === 'rejected' && !appointmentForm.rejectionReason.trim()) {
+      toast.error('Please provide a reason for rejecting this appointment.')
+      return
+    }
+
     const appointmentData = {
       customerId: appointmentForm.customerId,
       customerName: appointmentForm.customerName,
@@ -500,6 +509,7 @@ export function AppointmentsPage() {
       createdBy: 'admin',
       status: appointmentForm.status,
       note: appointmentForm.notes,
+      reasonForRejection: appointmentForm.rejectionReason,
     }
 
     if (editingAppointment) {
@@ -564,6 +574,7 @@ export function AppointmentsPage() {
       serviceType: '',
       notes: '',
       status: 'pending',
+      rejectionReason: '',
     })
   }
 
@@ -694,6 +705,23 @@ export function AppointmentsPage() {
                       Cancel
                     </button>
                   </div>
+                </div>
+              )}
+
+              {/* Rejection Reason - Only visible when rejected */}
+              {appointmentForm.status === 'rejected' && (
+                <div className="p-4 rounded-lg border-2 border-red-200 bg-red-50">
+                  <label className="block text-sm font-semibold text-red-900 mb-3">
+                    <AlertCircle className="inline h-4 w-4 mr-2" />
+                    Reason for Rejection
+                  </label>
+                  <textarea
+                    placeholder="Provide a reason for rejecting this appointment. This will be communicated to the customer..."
+                    className="w-full px-4 py-3 border text-xs border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent bg-white text-slate-900 placeholder-slate-400 min-h-[100px] resize-none"
+                    value={appointmentForm.rejectionReason}
+                    onChange={(e) => setAppointmentForm({ ...appointmentForm, rejectionReason: e.target.value })}
+                  />
+                  <p className="text-xs text-red-700 mt-2">* Rejection reason is required when rejecting an appointment</p>
                 </div>
               )}
 
@@ -1487,6 +1515,11 @@ export function AppointmentsPage() {
                           {appointment.notes && (
                             <div className="mt-2 text-xs text-gray-700 truncate bg-white/40 px-2 py-1 rounded">
                               📝 {appointment.notes}
+                            </div>
+                          )}
+                          {appointment.rejectionReason && appointment.status === 'rejected' && (
+                            <div className="mt-2 text-xs text-red-700 bg-red-50 px-2 py-1.5 rounded border border-red-200">
+                              <span className="font-semibold">Rejection Reason:</span> {appointment.rejectionReason}
                             </div>
                           )}
                           {showAppointmentMenu === appointment.id && (

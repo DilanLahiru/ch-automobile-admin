@@ -8,6 +8,7 @@ import supplierReducer from "../features/supplierSlice";
 import EmployeeReducer from "../features/employeeSlice";
 import serviceOrderReducer from "../features/serviceOrderSlice";
 import serviceTypeReducer from "../features/serviceTypeSlice";
+import oldServiceRecordSlice from "../features/oldServiceRecordSlice";
 
 export const store = configureStore({
   reducer: {
@@ -20,5 +21,6 @@ export const store = configureStore({
     employee: EmployeeReducer,
     serviceOrder: serviceOrderReducer,
     serviceType: serviceTypeReducer,
+    oldServiceRecord: oldServiceRecordSlice,
   },
 });

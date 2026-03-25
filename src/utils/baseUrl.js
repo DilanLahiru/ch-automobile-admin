@@ -1,12 +1,15 @@
 // Define the base URL for the API
-export const baseUrl = "http://143.20.170.42:3000";
-//export const baseUrl = "http://192.168.8.101:3000";
+//export const baseUrl = "http://143.20.170.42:3000";
+export const baseUrl = "http://192.168.8.101:3000";
 
 export const API_PATH = {
   AUTH: {
     LOGIN: "/api/user/login",
     REGISTER: "/api/user/register",
     GET_LOGIN_USER: `/api/employee/current`,
+    GET_PROFILE: "/api/user/profile",
+    UPDATE_PROFILE:  "/api/user/update-profile",
+    CHANGE_PASSWORD:  "/api/user/update-password",
   },
   APPOINTMENT: {
     GET_ALL: "/api/appointment/all",
@@ -38,8 +41,12 @@ export const API_PATH = {
   EMLOYEE: {
     GET_ALL: "/api/employee/all",
     CREATE: "/api/employee/create",
-    UPDATE: "/api/employee/update",
-    DELETE: "/api/employee/delete",
+    UPDATE: (id) => `/api/employee/update/${id}`,
+    DELETE: (id) => `/api/employee/delete/${id}`,
+  },
+  OLD_SERVICE_ORDER: {
+    GET_ALL: "/api/old-service-record/all",
+    CREATE: "/api/old-service-record/create",
   },
   SERVICE_ORDER: {
     GET_ALL: "/api/service-record/all",

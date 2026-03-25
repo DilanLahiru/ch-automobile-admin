@@ -31,18 +31,18 @@ const EmployeeRegistration = ({ onAddEmployee, onClose, initialData }) => {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.name?.trim()) newErrors.name = "Name is required";
-    if (!formData.contactNumber?.trim())
+    if (!String(formData.name || "").trim()) newErrors.name = "Name is required";
+    if (!String(formData.contactNumber || "").trim())
       newErrors.contactNumber = "Contact number is required";
-    if (!formData.email?.trim()) {
+    if (!String(formData.email || "").trim()) {
       newErrors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    } else if (!/\S+@\S+\.\S+/.test(String(formData.email))) {
       newErrors.email = "Email is invalid";
     }
-    if (!formData.address?.trim()) newErrors.address = "Address is required";
-    if (!formData.nicNumber?.trim())
+    if (!String(formData.address || "").trim()) newErrors.address = "Address is required";
+    if (!String(formData.nicNumber || "").trim())
       newErrors.nicNumber = "NIC number is required";
-    if (!formData.epfNumber?.trim())
+    if (!String(formData.epfNumber || "").trim())
       newErrors.epfNumber = "EPF number is required";
 
     return newErrors;

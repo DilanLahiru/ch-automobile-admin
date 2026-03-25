@@ -12,11 +12,10 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import {
   getAllEmployee,
-  createEmployee,
-  updateEmployee,
   deleteEmployee,
 } from "../../features/employeeSlice";
 import EmployeeRegistration from "../../components/EmployeeRegistrationModal";
+import { Dialog } from "../../components/ui/Dialog";
 import { toast } from "react-toastify";
 
 // Main EmployeePage Component
@@ -30,6 +29,9 @@ export function EmployeePage() {
   const [showRegistration, setShowRegistration] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [editingEmployee, setEditingEmployee] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     handleLoadEmployees();
@@ -58,20 +60,41 @@ export function EmployeePage() {
   };
 
   const handleEditEmployee = (employee) => {
+    console.log('====================================');
+    console.log(employee);
+    console.log('====================================');
     setEditingEmployee(employee);
     setShowRegistration(true);
   };
 
-  const handleDeleteEmployee = (id) => {
-    if (window.confirm("Are you sure you want to delete this employee?")) {
-      dispatch(deleteEmployee(id))
-        .then(() => {
-          toast.success("Employee deleted successfully!");
-        })
-        .catch((error) => {
-          toast.error(error || "Failed to delete employee");
-        });
+  const handleDeleteEmployee = (employee) => {
+    setEmployeeToDelete(employee);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!employeeToDelete?._id) {
+      toast.error("Invalid employee data");
+      return;
     }
+    
+    setIsDeleting(true);
+    try {
+      await dispatch(deleteEmployee(employeeToDelete._id)).unwrap();
+      toast.success("Employee deleted successfully!");
+      setShowDeleteConfirm(false);
+      setEmployeeToDelete(null);
+    } catch (error) {
+      console.log("Delete error:", error);
+      toast.error(error?.message || error?.toString() || "Failed to delete employee");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleCloseDeleteConfirm = () => {
+    setShowDeleteConfirm(false);
+    setEmployeeToDelete(null);
   };
 
   const handleCloseRegistration = () => {
@@ -242,7 +265,7 @@ export function EmployeePage() {
                         <Edit2 className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => handleDeleteEmployee(employee._id)}
+                        onClick={() => handleDeleteEmployee(employee)}
                         className="p-2 hover:bg-red-50 rounded-lg transition-colors text-red-600"
                         title="Delete"
                       >
@@ -265,6 +288,35 @@ export function EmployeePage() {
           initialData={editingEmployee}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={showDeleteConfirm}
+        onClose={handleCloseDeleteConfirm}
+        title="Delete Employee"
+        description="This action cannot be undone."
+      >
+        <div className="space-y-4">
+          <p className="text-gray-700">
+            Are you sure you want to delete <span className="font-semibold">{employeeToDelete?.name}</span>? This will permanently remove all associated data.
+          </p>
+          <div className="flex justify-end gap-3 pt-4">
+            <button
+              onClick={handleCloseDeleteConfirm}
+              className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmDelete}
+              disabled={isDeleting}
+              className="px-4 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </button>
+          </div>
+        </div>
+      </Dialog>
     </div>
   );
 }
