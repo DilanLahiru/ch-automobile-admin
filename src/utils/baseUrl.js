@@ -1,6 +1,6 @@
 // Define the base URL for the API
-//export const baseUrl = "http://143.20.170.42:3000";
-export const baseUrl = "http://192.168.8.101:3000";
+export const baseUrl = "http://143.20.170.42:3000";
+//export const baseUrl = "http://192.168.8.101:3000";
 
 export const API_PATH = {
   AUTH: {
