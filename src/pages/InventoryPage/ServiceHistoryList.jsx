@@ -17,6 +17,10 @@ import { Badge } from "../../components/ui/Badge";
 import { SearchBar } from "../../components/ui/SearchBar";
 import { useDispatch, useSelector } from "react-redux";
 import { getAllServiceOrders } from "../../features/serviceOrderSlice";
+import {
+  downloadServiceHistoryAsPDF,
+  printServiceHistory,
+} from "../../utils/serviceHistoryPdfUtils";
 
 /**
  * Utility function to format currency
@@ -189,8 +193,7 @@ export function ServiceHistoryList() {
                 <th className="px-6 py-4 font-medium">Service Description</th>
                 <th className="px-6 py-4 font-medium">Parts</th>
                 <th className="px-6 py-4 font-medium text-right">Amount</th>
-                {/* <th className="px-6 py-4 font-medium">Status</th> */}
-                {/* <th className="px-6 py-4 font-medium text-right">Actions</th> */}
+                <th className="px-6 py-4 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -268,6 +271,29 @@ export function ServiceHistoryList() {
                       {/* <p className="text-xs text-gray-500">
                         Labor: {formatCurrency(order.laborCost || 0)}
                       </p> */}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => printServiceHistory(order)}
+                          className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-blue-100 hover:text-blue-600"
+                          title="Print Service History"
+                        >
+                          <Printer className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() =>
+                            downloadServiceHistoryAsPDF(
+                              order,
+                              `Service_History_${order.vehicleNumber}.pdf`
+                            )
+                          }
+                          className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-green-100 hover:text-green-600"
+                          title="Download as PDF"
+                        >
+                          <Download className="h-4 w-4" />
+                        </button>
+                      </div>
                     </td>
                     {/* <td className="px-6 py-4">
                       {getStatusBadge(order.status)}

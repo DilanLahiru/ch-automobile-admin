@@ -9,6 +9,8 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
+  Download,
+  Printer,
 } from "lucide-react";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -20,6 +22,10 @@ import { getAllAppointments } from "../../features/appointmentSlice";
 import { getAllProducts } from "../../features/productSlice";
 import { createServiceOrder } from "../../features/serviceOrderSlice";
 import { toast } from "react-toastify";
+import {
+  downloadServiceHistoryAsPDF,
+  printServiceHistory,
+} from "../../utils/serviceHistoryPdfUtils";
 
 export function ServiceOrderPage() {
   const dispatch = useDispatch();
@@ -44,6 +50,7 @@ export function ServiceOrderPage() {
   const [availableVehicles, setAvailableVehicles] = useState([]);
   const [draftRepairs, setDraftRepairs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [completedServiceOrder, setCompletedServiceOrder] = useState(null);
 
   useEffect(() => {
     loadAllDetails();
@@ -403,6 +410,36 @@ export function ServiceOrderPage() {
     try {
       const result = await dispatch(createServiceOrder(orderData)).unwrap();
       
+      // Get employee details for complete service order
+      const selectedEmployee = getAvailableEmployees().find(
+        (emp) => emp._id === currentRepair.employeeId,
+      );
+
+      // Enrich the service order with complete details for PDF generation
+      const enrichedServiceOrder = {
+        ...result,
+        vehicleNumber: currentRepair.vehicleNumber,
+        customerId: currentVehicle?.customerId ? {
+          name: currentVehicle?.customerName || "Unknown Customer",
+          contactNumber: currentVehicle?.contactNumber || "N/A",
+          email: currentVehicle?.email || "N/A",
+          ...currentVehicle,
+        } : null,
+        employeeId: selectedEmployee ? {
+          name: selectedEmployee.name,
+          position: selectedEmployee.position || "Technician",
+          ...selectedEmployee,
+        } : null,
+        serviceDescription: currentRepair.serviceDescription,
+        laborCost: parseFloat(currentRepair.laborCost) || 0,
+        parts: currentRepair.parts || [],
+        status: "completed",
+        totalAmount: calculateRepairTotal(currentRepair),
+      };
+
+      // Store the completed service order for PDF download/print
+      setCompletedServiceOrder(enrichedServiceOrder);
+      
       // Success handling
       toast.success(`✓ Repair Completed!\nVehicle: ${currentRepair.vehicleNumber}\nTotal: Rs. ${calculateRepairTotal(currentRepair).toFixed(2)}`);
   
@@ -417,11 +454,6 @@ export function ServiceOrderPage() {
         localStorage.removeItem("serviceOrderDraft");
         initializeNewRepair();
       }
-  
-      // Refresh the page after success toast has time to display
-      setTimeout(() => {
-        window.location.reload();
-      }, 2000);
     } catch (error) {
       toast.error("Failed to create service order");
       console.error("Create service order error:", error);
@@ -449,6 +481,74 @@ export function ServiceOrderPage() {
             <p className="text-lg font-semibold text-gray-900">Completing Service Order</p>
             <p className="text-sm text-gray-600 mt-2">Please wait while we process your request...</p>
           </div>
+        </div>
+      )}
+
+      {/* Service Completed Success Modal */}
+      {completedServiceOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="max-w-md w-full bg-white shadow-2xl">
+            <div className="text-center mb-6">
+              <div className="flex justify-center mb-4">
+                <div className="bg-green-100 rounded-full p-4">
+                  <CheckCircle className="h-12 w-12 text-green-600" />
+                </div>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Service Completed!</h2>
+              <p className="text-sm text-gray-600">
+                Vehicle <span className="font-semibold">{completedServiceOrder.vehicleNumber}</span> service order has been successfully created.
+              </p>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <div className="text-sm space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Order ID:</span>
+                  <span className="font-medium">{completedServiceOrder._id?.slice(-8)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Total Amount:</span>
+                  <span className="font-bold text-lg text-green-600">
+                    Rs. {(completedServiceOrder.totalAmount || 0).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-500 mb-4 text-center">You can now download or print the service receipt</p>
+
+            <div className="space-y-3">
+              <Button
+                className="w-full bg-green-600 hover:bg-green-700"
+                onClick={() => downloadServiceHistoryAsPDF(
+                  completedServiceOrder,
+                  `Service_History_${completedServiceOrder.vehicleNumber}.pdf`
+                )}
+                rightIcon={<Download className="h-4 w-4" />}
+              >
+                Download as PDF
+              </Button>
+              <Button
+                variant="secondary"
+                className="w-full"
+                onClick={() => printServiceHistory(completedServiceOrder)}
+                rightIcon={<Printer className="h-4 w-4" />}
+              >
+                Print Receipt
+              </Button>
+              <button
+                onClick={() => {
+                  setCompletedServiceOrder(null);
+                  setTimeout(() => {
+                    window.location.reload();
+                  }, 500);
+                }}
+                className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Continue to Next Service
+              </button>
+            </div>
+          </Card>
         </div>
       )}
 
