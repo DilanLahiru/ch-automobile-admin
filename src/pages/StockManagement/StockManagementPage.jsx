@@ -9,14 +9,17 @@ import {
   XCircle,
   TrendingUp,
   Box,
+  Edit,
 } from "lucide-react";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
 import { SearchBar } from "../../components/ui/SearchBar";
 import { AddProductDialog } from "../../components/AddProductDialog";
+import { UpdateProductDialog } from "../../components/UpdateProductDialog";
 import { useDispatch, useSelector } from "react-redux";
-import { getAllProducts, createProduct } from "../../features/productSlice";
+import { getAllProducts, createProduct, updateProduct, deleteProduct } from "../../features/productSlice";
+import { toast } from "react-toastify";
 
 export function StockManagementPage() {
   const dispatch = useDispatch();
@@ -27,6 +30,8 @@ export function StockManagementPage() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
+  const [isUpdateProductOpen, setIsUpdateProductOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
 
   useEffect(() => {
@@ -61,15 +66,48 @@ export function StockManagementPage() {
   };
 
   const handleAddProduct = (productData) => {
-    console.log("New product added:", productData);
     setIsAddProductOpen(false);
     // Reload products after adding
     dispatch(getAllProducts());
   };
 
-  const filteredData = (productsFromRedux || []).filter((item) =>
-    item?.name?.toLowerCase?.()?.includes(searchTerm.toLowerCase()) || false,
-  );
+  const handleEditProduct = (product) => {
+    setSelectedProduct(product);
+    setIsUpdateProductOpen(true);
+  };
+
+  const handleUpdateProduct = (updatedProduct) => {
+    setIsUpdateProductOpen(false);
+    setSelectedProduct(null);
+    // Reload products after updating
+    dispatch(getAllProducts());
+  };
+
+  const handleDeleteProduct = async (productId, productName) => {
+    if (!window.confirm(`Are you sure you want to delete "${productName}"?`)) {
+      return;
+    }
+
+    try {
+      await dispatch(deleteProduct(productId)).unwrap();
+      toast.success("Product deleted successfully!");
+      dispatch(getAllProducts());
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      toast.error(error || "Failed to delete product");
+    }
+  };
+
+  // Filter products based on search term name and supplier name
+  const filteredData = (productsFromRedux || []).filter((item) => {
+    const name = item?.name?.toLowerCase?.();
+    const supplierName = item?.supplierName?.toLowerCase?.();
+    return (
+      name?.includes(searchTerm.toLowerCase()) ||
+      supplierName?.includes(searchTerm.toLowerCase()) ||
+      false
+    );
+  });
 
   // Calculate Stats
   const totalProducts = (productsFromRedux || []).length;
@@ -113,7 +151,7 @@ export function StockManagementPage() {
         <div className="flex flex-col gap-4 border-b border-gray-100 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="w-full sm:w-72">
             <SearchBar
-              placeholder="Search part name, SKU, category..."
+              placeholder="Search part name"
               value={searchTerm}
               onSearch={setSearchTerm}
             />
@@ -143,6 +181,7 @@ export function StockManagementPage() {
                 <th className="px-6 py-4 font-medium">Stock</th>
                 <th className="px-6 py-4 font-medium">Available Quantity</th>
                 <th className="px-6 py-4 font-medium">Status</th>
+                <th className="px-6 py-4 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -198,6 +237,19 @@ export function StockManagementPage() {
                   <td className="px-6 py-4">
                     {getStatusBadge(item.quantity, item.minimumStock)}
                   </td>
+                  <td className="px-6 py-4">
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditProduct(item)}
+                        title="Edit product"
+                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -225,6 +277,14 @@ export function StockManagementPage() {
         open={isAddProductOpen}
         onClose={() => setIsAddProductOpen(false)}
         onAddProduct={handleAddProduct}
+      />
+
+      {/* Update Product Dialog */}
+      <UpdateProductDialog
+        open={isUpdateProductOpen}
+        onClose={() => setIsUpdateProductOpen(false)}
+        product={selectedProduct}
+        onUpdateProduct={handleUpdateProduct}
       />
     </div>
   );

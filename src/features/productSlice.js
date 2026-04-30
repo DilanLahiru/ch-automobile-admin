@@ -41,14 +41,8 @@ export const createProduct = createAsyncThunk(
           },
         },
       );
-      console.log('====================================');
-      console.log(response.data);
-      console.log('====================================');
       return response.data;
     } catch (error) {
-      console.log("====================================");
-      console.log(error);
-      console.log("====================================");
       return rejectWithValue(
         error.response?.data?.message || "Failed to create product",
       );
@@ -61,16 +55,11 @@ export const updateProduct = createAsyncThunk(
   "product/update",
   async (productData, { rejectWithValue }) => {
     try {
-      const response = await axios.put(
-        `${baseUrl}${API_PATH.PRODUCT.UPDATE}`,
-        productData,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
+      const response = await axios.put(`${baseUrl}${API_PATH.PRODUCT.UPDATE(productData.id)}`, productData, {
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+      });
       return response.data;
     } catch (error) {
       return rejectWithValue(

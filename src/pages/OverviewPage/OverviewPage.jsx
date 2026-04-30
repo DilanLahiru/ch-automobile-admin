@@ -113,129 +113,6 @@ const Badge = ({
   );
 };
 
-// Mock data for completed parts
-const completedPartsData = [
-  { month: "Jan", parts: 45, revenue: 12500 },
-  { month: "Feb", parts: 52, revenue: 14200 },
-  { month: "Mar", parts: 48, revenue: 13800 },
-  { month: "Apr", parts: 61, revenue: 16500 },
-  { month: "May", parts: 58, revenue: 15900 },
-  { month: "Jun", parts: 72, revenue: 19400 },
-];
-
-// Mock data for low stock items
-const lowStockItems = [
-  {
-    id: 1,
-    partName: "Brake Pads (Front)",
-    partNumber: "BP-2024-01",
-    currentStock: 5,
-    minimumStock: 15,
-    category: "Braking System",
-    supplier: "AutoParts Co.",
-    urgency: "high",
-  },
-  {
-    id: 2,
-    partName: "Oil Filter",
-    partNumber: "OF-2024-02",
-    currentStock: 8,
-    minimumStock: 20,
-    category: "Engine",
-    supplier: "TechFilter Inc.",
-    urgency: "medium",
-  },
-  {
-    id: 3,
-    partName: "Air Filter",
-    partNumber: "AF-2024-03",
-    currentStock: 3,
-    minimumStock: 15,
-    category: "Engine",
-    supplier: "AirTech Solutions",
-    urgency: "high",
-  },
-  {
-    id: 4,
-    partName: "Spark Plugs Set",
-    partNumber: "SP-2024-04",
-    currentStock: 12,
-    minimumStock: 25,
-    category: "Ignition",
-    supplier: "ElectroAuto Ltd.",
-    urgency: "medium",
-  },
-  {
-    id: 5,
-    partName: "Battery 12V",
-    partNumber: "BT-2024-05",
-    currentStock: 6,
-    minimumStock: 12,
-    category: "Electrical",
-    supplier: "PowerCell Industries",
-    urgency: "high",
-  },
-];
-
-// Mock data for customers
-const customerData = [
-  {
-    id: 1,
-    name: "John Mitchell",
-    email: "john.mitchell@example.com",
-    phone: "+1-555-0101",
-    totalOrders: 12,
-    totalSpent: 15400,
-    lastOrder: "2025-01-02",
-    status: "Active",
-    loyalty: "Platinum",
-  },
-  {
-    id: 2,
-    name: "Sarah Johnson",
-    email: "sarah.johnson@example.com",
-    phone: "+1-555-0102",
-    totalOrders: 8,
-    totalSpent: 9800,
-    lastOrder: "2024-12-28",
-    status: "Active",
-    loyalty: "Gold",
-  },
-  {
-    id: 3,
-    name: "Michael Davis",
-    email: "michael.davis@example.com",
-    phone: "+1-555-0103",
-    totalOrders: 5,
-    totalSpent: 6200,
-    lastOrder: "2024-12-15",
-    status: "Inactive",
-    loyalty: "Silver",
-  },
-  {
-    id: 4,
-    name: "Emily Rodriguez",
-    email: "emily.rodriguez@example.com",
-    phone: "+1-555-0104",
-    totalOrders: 18,
-    totalSpent: 22500,
-    lastOrder: "2025-01-03",
-    status: "Active",
-    loyalty: "Platinum",
-  },
-  {
-    id: 5,
-    name: "David Chen",
-    email: "david.chen@example.com",
-    phone: "+1-555-0105",
-    totalOrders: 3,
-    totalSpent: 4100,
-    lastOrder: "2024-11-20",
-    status: "Inactive",
-    loyalty: "Bronze",
-  },
-];
-
 const getStockPercentage = (current, minimum) => {
   return Math.round((current / minimum) * 100);
 };
@@ -944,16 +821,23 @@ export function OverviewPage() {
                 Items requiring immediate attention
               </p>
             </div>
-            <Button
+            {/* <Button
               variant="outline"
               size="sm"
               className="flex items-center gap-2"
             >
               <AlertTriangle className="w-4 h-4" />
               View All
-            </Button>
+            </Button> */}
           </div>
           <div className="space-y-4">
+            {lowStockItems.length === 0 && (
+              <div className="text-center mt-52">
+                <CheckCircle className="w-10 h-10 text-green-400 mx-auto mb-4" />
+                <h4 className="text-sm font-semibold text-gray-600 font-sans uppercase">All items are sufficiently stocked</h4>
+              </div>
+            )} 
+            <>
             {lowStockItems.map((item) => {
               const percentage = getStockPercentage(
                 item.currentStock,
@@ -978,23 +862,23 @@ export function OverviewPage() {
                             {item.category}
                           </Badge>
                         </div>
-                        <p className="text-sm text-gray-500 font-mono mt-1">
-                          {item.partNumber}
+                        <p className="text-xs text-gray-500 font-sans mt-1">
+                          {item.supplier}
                         </p>
                       </div>
                     </div>
-                    <Button
+                    {/* <Button
                       variant="ghost"
                       size="sm"
                       className="opacity-0 group-hover:opacity-100"
                     >
                       <ArrowRight className="w-4 h-4" />
-                    </Button>
+                    </Button> */}
                   </div>
                   <div className="flex items-center justify-between mt-4">
                     <div className="flex-1 mr-4">
                       <div className="flex justify-between text-sm text-gray-600 mb-1">
-                        <span>Stock Level</span>
+                        <span className="text-xs font-semibold font-sans">Stock Level</span>
                         <span className="font-semibold">
                           {item.currentStock}/{item.minimumStock}
                         </span>
@@ -1012,16 +896,18 @@ export function OverviewPage() {
                         ></div>
                       </div>
                     </div>
-                    <Button
+                    {/* <Button
                       size="sm"
                       className="bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700"
                     >
                       Reorder
-                    </Button>
+                    </Button> */}
                   </div>
                 </div>
               );
             })}
+            </>
+            
           </div>
         </Card>
 
@@ -1036,14 +922,14 @@ export function OverviewPage() {
                 Your most valuable clients from appointments
               </p>
             </div>
-            <Button
+            {/* <Button
               variant="outline"
               size="sm"
               className="flex items-center gap-2"
             >
               <Users className="w-4 h-4" />
               View All
-            </Button>
+            </Button> */}
           </div>
 
           {topCustomers.length > 0 ? (
