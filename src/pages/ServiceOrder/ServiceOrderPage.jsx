@@ -196,7 +196,7 @@ export function ServiceOrderPage() {
     vehicleNumber: "",
     employeeId: "",
     serviceDescription: "",
-    laborCost: 0,
+    laborCost: 4500,
     parts: [],
     status: "pending",
     createdAt: "",
@@ -381,6 +381,12 @@ export function ServiceOrderPage() {
     // Validate only the current repair
     if (!currentRepair.vehicleNumber || !currentRepair.employeeId) {
       toast.error("Please assign both vehicle and employee to this repair");
+      return;
+    }
+
+    // Validate that parts have been added
+    if (!currentRepair.parts || currentRepair.parts.length === 0) {
+      toast.error("Please add Parts & Materials before completing the repair");
       return;
     }
 
@@ -946,7 +952,7 @@ export function ServiceOrderPage() {
               </div>
 
               <div className="pt-4 space-y-2 border-t border-gray-100">
-                <Button
+                {/* <Button
                   className={`w-full ${
                     currentRepair.status === "completed"
                       ? "bg-green-600 hover:bg-green-700"
@@ -974,7 +980,7 @@ export function ServiceOrderPage() {
                       <CheckCircle className="h-4 w-4 mr-2" /> Mark as Completed
                     </>
                   )}
-                </Button>
+                </Button> */}
                 {repairs.length > 1 && (
                   <Button
                     variant="secondary"
@@ -1008,14 +1014,31 @@ export function ServiceOrderPage() {
               </div> */}
 
               <div className="space-y-3">
-                <Button
-                  className="w-full"
-                  onClick={handleCreateServiceOrder}
-                  disabled={isLoadingServiceOrder || repairs.length === 0}
-                  rightIcon={<ArrowRight className="h-4 w-4" />}
-                >
-                  Complete Repair
-                </Button>
+                {currentRepair.parts && currentRepair.parts.length > 0 && currentRepair.employeeId ? (
+                  <Button
+                    className="w-full"
+                    onClick={handleCreateServiceOrder}
+                    disabled={isLoadingServiceOrder || repairs.length === 0}
+                    rightIcon={<ArrowRight className="h-4 w-4" />}
+                  >
+                    Complete Repair
+                  </Button>
+                ) : (
+                  <div className="w-full">
+                    <Button
+                      className="w-full bg-gray-300 hover:bg-gray-300 cursor-not-allowed"
+                      disabled={true}
+                      rightIcon={<ArrowRight className="h-4 w-4" />}
+                    >
+                      Complete Repair
+                    </Button>
+                    <p className="text-xs text-gray-500 mt-2 text-center">
+                      {!currentRepair.parts || currentRepair.parts.length === 0 
+                        ? "Add Parts & Materials to complete this repair"
+                        : "Assign an employee to complete this repair"}
+                    </p>
+                  </div>
+                )}
                 <Button
                   variant="secondary"
                   className="w-full"

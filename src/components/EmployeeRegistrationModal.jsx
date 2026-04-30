@@ -1,7 +1,20 @@
-import { Hash, IdCard, Mail, MapPin, Phone, UserPlus, Users, XCircle } from "lucide-react";
+import {
+  Hash,
+  IdCard,
+  Mail,
+  MapPin,
+  Phone,
+  UserPlus,
+  Users,
+  XCircle,
+} from "lucide-react";
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { createEmployee, updateEmployee, getAllEmployee } from "../features/employeeSlice";
+import {
+  createEmployee,
+  updateEmployee,
+  getAllEmployee,
+} from "../features/employeeSlice";
 import { toast } from "react-toastify";
 
 const EmployeeRegistration = ({ onAddEmployee, onClose, initialData }) => {
@@ -12,7 +25,7 @@ const EmployeeRegistration = ({ onAddEmployee, onClose, initialData }) => {
       email: "",
       address: "",
       nicNumber: "",
-      epfNumber: "",
+      //epfNumber: "",
       //department: '',
       //position: ''
     },
@@ -31,7 +44,8 @@ const EmployeeRegistration = ({ onAddEmployee, onClose, initialData }) => {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!String(formData.name || "").trim()) newErrors.name = "Name is required";
+    if (!String(formData.name || "").trim())
+      newErrors.name = "Name is required";
     if (!String(formData.contactNumber || "").trim())
       newErrors.contactNumber = "Contact number is required";
     if (!String(formData.email || "").trim()) {
@@ -39,11 +53,12 @@ const EmployeeRegistration = ({ onAddEmployee, onClose, initialData }) => {
     } else if (!/\S+@\S+\.\S+/.test(String(formData.email))) {
       newErrors.email = "Email is invalid";
     }
-    if (!String(formData.address || "").trim()) newErrors.address = "Address is required";
+    if (!String(formData.address || "").trim())
+      newErrors.address = "Address is required";
     if (!String(formData.nicNumber || "").trim())
       newErrors.nicNumber = "NIC number is required";
-    if (!String(formData.epfNumber || "").trim())
-      newErrors.epfNumber = "EPF number is required";
+    // if (!String(formData.epfNumber || "").trim())
+    //   newErrors.epfNumber = "EPF number is required";
 
     return newErrors;
   };
@@ -133,7 +148,7 @@ const EmployeeRegistration = ({ onAddEmployee, onClose, initialData }) => {
                   name="name"
                   value={formData.name || ""}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 pl-11 rounded-lg border ${errors.name ? "border-red-500" : "border-gray-300"} focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all`}
+                  className={`w-full text-sm px-4 py-3 pl-11 rounded-lg border ${errors.name ? "border-red-500" : "border-gray-300"} focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all`}
                   placeholder="John Doe"
                 />
                 <Users className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
@@ -153,7 +168,7 @@ const EmployeeRegistration = ({ onAddEmployee, onClose, initialData }) => {
                   name="contactNumber"
                   value={formData.contactNumber || ""}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 pl-11 rounded-lg border ${errors.contactNumber ? "border-red-500" : "border-gray-300"} focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all`}
+                  className={`w-full text-sm px-4 py-3 pl-11 rounded-lg border ${errors.contactNumber ? "border-red-500" : "border-gray-300"} focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all`}
                   placeholder="+94 77 123 4567"
                 />
                 <Phone className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
@@ -175,7 +190,7 @@ const EmployeeRegistration = ({ onAddEmployee, onClose, initialData }) => {
                   name="email"
                   value={formData.email || ""}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 pl-11 rounded-lg border ${errors.email ? "border-red-500" : "border-gray-300"} focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all`}
+                  className={`w-full text-sm px-4 py-3 pl-11 rounded-lg border ${errors.email ? "border-red-500" : "border-gray-300"} focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all`}
                   placeholder="john@company.com"
                 />
                 <Mail className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
@@ -195,7 +210,7 @@ const EmployeeRegistration = ({ onAddEmployee, onClose, initialData }) => {
                   name="nicNumber"
                   value={formData.nicNumber || ""}
                   onChange={handleChange}
-                  className={`w-full px-4 py-3 pl-11 rounded-lg border ${errors.nicNumber ? "border-red-500" : "border-gray-300"} focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all`}
+                  className={`w-full text-sm px-4 py-3 pl-11 rounded-lg border ${errors.nicNumber ? "border-red-500" : "border-gray-300"} focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all`}
                   placeholder="123456789V"
                 />
                 <IdCard className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
@@ -205,25 +220,31 @@ const EmployeeRegistration = ({ onAddEmployee, onClose, initialData }) => {
               )}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                EPF Number *
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  name="epfNumber"
-                  value={formData.epfNumber || ""}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-3 pl-11 rounded-lg border ${errors.epfNumber ? "border-red-500" : "border-gray-300"} focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all`}
-                  placeholder="EPF123456"
-                />
-                <Hash className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+            {initialData?._id ? (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  EPF Number *
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    name="epfNumber"
+                    value={formData.epfNumber || ""}
+                    onChange={handleChange}
+                    className={`w-full px-4 py-3 pl-11 rounded-lg border ${errors.epfNumber ? "border-red-500" : "border-gray-300"} focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all`}
+                    placeholder="EPF123456"
+                  />
+                  <Hash className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
+                </div>
+                {errors.epfNumber && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.epfNumber}
+                  </p>
+                )}
               </div>
-              {errors.epfNumber && (
-                <p className="mt-1 text-sm text-red-600">{errors.epfNumber}</p>
-              )}
-            </div>
+            ) : (
+              <></>
+            )}
 
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -235,7 +256,7 @@ const EmployeeRegistration = ({ onAddEmployee, onClose, initialData }) => {
                   value={formData.address || ""}
                   onChange={handleChange}
                   rows="3"
-                  className={`w-full px-4 py-3 pl-11 rounded-lg border ${errors.address ? "border-red-500" : "border-gray-300"} focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none`}
+                  className={`w-full text-sm px-4 py-3 pl-11 rounded-lg border ${errors.address ? "border-red-500" : "border-gray-300"} focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none`}
                   placeholder="123 Main Street, Colombo"
                 />
                 <MapPin className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />

@@ -126,6 +126,15 @@ const generateServiceHistoryHTML = (serviceOrder) => {
           color: #3b82f6;
           margin-top: 4px;
         }
+        .company-contact {
+          font-size: 10px;
+          color: #475569;
+          margin-top: 8px;
+          line-height: 1.4;
+        }
+        .contact-item {
+          margin-bottom: 2px;
+        }
         .document-title {
           font-size: 18px;
           font-weight: 600;
@@ -248,7 +257,7 @@ const generateServiceHistoryHTML = (serviceOrder) => {
           gap: 50px;
         }
         .grand-total .total-label {
-          font-size: 16px;
+          font-size: 14px;
         }
 
         /* Footer */
@@ -301,8 +310,11 @@ const generateServiceHistoryHTML = (serviceOrder) => {
               <img src="${InvoiceLogo}" alt="Company Logo" class="logo" />
             </div>
             <div class="company-info">
-              <div class="company-name">CH Automobile Service</div>
-              <div class="company-tagline">Drive without worries</div>
+              <div class="company-contact">
+                <div class="contact-item">Tel: +94 (71) 427 4163 / +94 (34) 222 1176</div>
+                <div class="contact-item">Email: chautomob@gmail.com</div>
+                <div class="contact-item">Address: 304 A Abhaya Street, Nagoda, Kalutara</div>
+              </div>
             </div>
           </div>
 
@@ -339,7 +351,7 @@ const generateServiceHistoryHTML = (serviceOrder) => {
               </div>
               <div class="info-row">
                 <div class="info-label">Contact:</div>
-                <div class="info-value">071 427 4163</div>
+                <div class="info-value">+94 (71) 427 4163</div>
               </div>
               <div class="info-row">
                 <div class="info-label">Email:</div>
