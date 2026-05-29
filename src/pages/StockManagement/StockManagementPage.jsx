@@ -83,6 +83,13 @@ export function StockManagementPage() {
     dispatch(getAllProducts());
   };
 
+  const handleProductDeleted = () => {
+    setIsUpdateProductOpen(false);
+    setSelectedProduct(null);
+    // Reload products after deletion
+    dispatch(getAllProducts());
+  };
+
   const handleDeleteProduct = async (productId, productName) => {
     if (!window.confirm(`Are you sure you want to delete "${productName}"?`)) {
       return;
@@ -285,6 +292,7 @@ export function StockManagementPage() {
         onClose={() => setIsUpdateProductOpen(false)}
         product={selectedProduct}
         onUpdateProduct={handleUpdateProduct}
+        onDeleteProduct={handleProductDeleted}
       />
     </div>
   );

@@ -34,6 +34,14 @@ const formatTime = (dateString) => {
   });
 };
 
+
+// Calculate 3% fee
+const calculateCardProcessingFee = (serviceOrder) => {
+  if (!serviceOrder) return 0;
+  const subtotal = serviceOrder.totalAmount || 0;
+  return subtotal * 0.03;
+};
+
 /**
  * Generate professional HTML template for service history record with logo and blue theme
  */
@@ -76,7 +84,7 @@ const generateServiceHistoryHTML = (serviceOrder) => {
           box-sizing: border-box;
         }
         body {
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+          font-family: Verdana, Geneva, sans-serif;
           background: #f1f5f9;
           padding: 20px;
         }
@@ -149,8 +157,8 @@ const generateServiceHistoryHTML = (serviceOrder) => {
         /* Info Cards */
         .info-grid {
           display: flex;
-          gap: 20px;
-          margin-bottom: 24px;
+          gap: 10px;
+          margin-bottom: 14px;
           flex-wrap: wrap;
         }
         .info-card {
@@ -174,30 +182,30 @@ const generateServiceHistoryHTML = (serviceOrder) => {
           font-size: 13px;
         }
         .info-label {
-          font-weight: 500;
+          font-weight: 600;
           width: 110px;
           color: #334155;
-          font-size: 12px;
+          font-size: 9px;
         }
         .info-value {
           color: #0f172a;
           font-weight: 500;
-          font-size: 11px;
+          font-size: 9px;
         }
 
         /* Table Styles */
         .section-title {
-          font-size: 14px;
+          font-size: 11px;
           font-weight: 600;
           margin: 20px 0 12px 0;
           padding-bottom: 6px;
-          border-bottom: 2px solid #3b82f6;
-          color: #1e3a8a;
+          border-bottom: 2px solid #2563eb;
+          color: #2563eb;
         }
         table {
           width: 100%;
           border-collapse: collapse;
-          font-size: 13px;
+          font-size: 11px;
         }
         th {
           background: #eff6ff;
@@ -231,33 +239,37 @@ const generateServiceHistoryHTML = (serviceOrder) => {
           justify-content: flex-end;
           gap: 30px;
           margin-bottom: 8px;
-          font-size: 14px;
+          font-size: 11px;
         }
         .total-label {
-          font-size: 13px;
-          font-weight: 700;
+          font-size: 10px;
+          font-weight: 600;
           text-transform: uppercase;
           letter-spacing: 0.5px;
-          color: #2563eb;
+          color: #1e3a8a;
           margin-bottom: 4px;
         }
         .total-amount {
-          font-weight: 700;
-          font-size: 13px;
+          font-weight: 600;
+          font-size: 10px;
           width: 120px;
           text-align: right;
         }
         .grand-total {
-          font-size: 16px;
+          font-size: 12px;
           font-weight: 700;
           color: #1e3a8a;
-          margin-top: 8px;
+          margin-top: 12px;
           border-top: 2px solid #bfdbfe;
           padding-top: 12px;
           gap: 50px;
         }
         .grand-total .total-label {
-          font-size: 14px;
+          font-size: 12px;
+        }
+        .grand-total .total-amount {
+          font-size: 12px;
+          color: #1e3a8a;
         }
 
         /* Footer */
@@ -340,42 +352,36 @@ const generateServiceHistoryHTML = (serviceOrder) => {
               </div>
             </div>
             <div class="info-card">
-              <div class="info-card-title">CREATED ON</div>
+              <div class="info-card-title">SERVICE INFO</div>
               <div class="info-row">
-                <div class="info-label">Date:</div>
-                <div class="info-value">${formatDate(serviceOrder.createdAt)}</div>
+                <div class="info-label">Status:</div>
+                <div class="info-value">${statusText}</div>
               </div>
               <div class="info-row">
-                <div class="info-label">Created By:</div>
-                <div class="info-value">Admin</div>
+                <div class="info-label">Technician:</div>
+                <div class="info-value">${serviceOrder.employeeId?.name || "Unassigned"}</div>
               </div>
               <div class="info-row">
-                <div class="info-label">Contact:</div>
-                <div class="info-value">+94 (71) 427 4163</div>
+                <div class="info-label">Service Type:</div>
+                <div class="info-value">${serviceOrder.serviceType || "General Service"}</div>
               </div>
               <div class="info-row">
-                <div class="info-label">Email:</div>
-                <div class="info-value">chautomob@gmail.com</div>
-              </div>
+                <div class="info-label">Payment Method:</div>
+              <div class="info-value" style="color: #059669;">${serviceOrder.paymentType ? serviceOrder.paymentType === "bank-transfer" ? "Bank Transfer" : serviceOrder.paymentType.charAt(0).toUpperCase() + serviceOrder.paymentType.slice(1) : "N/A"}</div>
+            </div>
             </div>
           </div>
 
           <!-- Customer & Service Info (combined in one card) -->
-          <div class="info-card" style="margin-bottom: 20px;">
-            <div class="info-card-title">SERVICE INFO</div>
-            <div class="info-row">
-              <div class="info-label">Status:</div>
-              <div class="info-value" style="color: #2563eb;">${statusText}</div>
+          ${serviceOrder.serviceDescription ? `
+            <div class="info-grid">
+              <div class="info-card">
+                <!-- Service Description (Important Note) -->
+                <div style="font-size: 10px; font-weight: 700; color: #991b1b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">⚠ Important Note</div>
+                <div style="font-size: 10px; color: #dc2626; font-weight: 600; line-height: 1.6; white-space: pre-wrap;">${serviceOrder.serviceDescription}</div>
+              </div>
             </div>
-            <div class="info-row">
-              <div class="info-label">Technician:</div>
-              <div class="info-value">${serviceOrder.employeeId?.name || "Unassigned"}</div>
-            </div>
-            <div class="info-row">
-              <div class="info-label">Description:</div>
-              <div class="info-value">${serviceOrder.serviceDescription || "General Service"}</div>
-            </div>
-          </div>
+          ` : ""}
 
           <!-- Parts Table -->
           <div class="section-title">PARTS USED</div>
@@ -392,18 +398,51 @@ const generateServiceHistoryHTML = (serviceOrder) => {
             </tbody>
           </table>
 
+          <!-- Other Charges Table (if applicable) -->
+          ${serviceOrder.otherCharges && serviceOrder.otherCharges.length > 0 ? `
+            <div class="section-title">OTHER CHARGES</div>
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 70%;">Charge Type</th>
+                  <th style="width: 30%;" class="text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${serviceOrder.otherCharges.map((charge) => `
+                  <tr>
+                    <td>${charge.chargeType || "Other Charge"}</td>
+                    <td class="text-right">${formatCurrency(charge.amount || 0)}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          ` : ""}
+
           <!-- Totals -->
           <div class="totals">
             <div class="total-line">
-              <span class="total-label">Labor Cost:</span>
+              <span class="total-label">Service Charge:</span>
               <span class="total-amount">${formatCurrency(serviceOrder.laborCost || 0)}</span>
             </div>
             <div class="total-line">
-              <span class="total-label">Parts Cost:</span>
-              <span class="total-amount">${formatCurrency((serviceOrder.totalAmount || 0) - (serviceOrder.laborCost || 0))}</span>
+              <span class="total-label">Materials Charge:</span>
+              <span class="total-amount">${formatCurrency((serviceOrder.parts || []).reduce((sum, p) => sum + ((p.price || 0) * (p.quantity || 0)), 0))}</span>
             </div>
-            <div class="total-line">
-              <span class="total-label">Total Amount:</span>
+            ${serviceOrder.paymentType === "card" ? `
+              <div class="total-line">
+                <span class="total-label">Card Processing Fee (3%):</span>
+                <span class="total-amount">${formatCurrency(calculateCardProcessingFee(serviceOrder))}</span>
+              </div>
+            ` : ""}
+            ${serviceOrder.otherChargeAmount && serviceOrder.otherChargeAmount > 0 ? `
+              <div class="total-line">
+                <span class="total-label">Other Charges:</span>
+                <span class="total-amount">${formatCurrency(serviceOrder.otherChargeAmount || 0)}</span>
+              </div>
+            ` : ""}
+            <div class="total-line grand-total">
+              <span class="total-label">TOTAL AMOUNT:</span>
               <span class="total-amount">${formatCurrency(serviceOrder.totalAmount || 0)}</span>
             </div>
           </div>

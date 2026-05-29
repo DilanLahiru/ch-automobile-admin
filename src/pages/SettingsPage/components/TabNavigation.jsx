@@ -1,20 +1,22 @@
 import React from "react";
-import { User, Lock, History } from "lucide-react";
+import { User, Lock, History, Wrench, DollarSign } from "lucide-react";
 import { motion } from "framer-motion";
 
 /**
  * TabNavigation Component
- * Handles tab switching between Profile, Password, and Repair History
+ * Handles tab switching between Profile, Password, Repair History, Service Types, and Other Charges
  */
 export function TabNavigation({ activeTab, onTabChange, isLoading }) {
   const tabs = [
     { id: "profile", label: "Profile", icon: User },
     { id: "password", label: "Password", icon: Lock },
     { id: "repairs", label: "Old Repairs", icon: History },
+    { id: "service-types", label: "Service Types", icon: Wrench },
+    { id: "other-charges", label: "Other Charges", icon: DollarSign },
   ];
 
   return (
-    <div className="flex gap-2 border-b border-gray-200 mb-8">
+    <div className="flex gap-2 border-b border-gray-200 mb-8 overflow-x-auto">
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.id;
@@ -27,7 +29,7 @@ export function TabNavigation({ activeTab, onTabChange, isLoading }) {
             aria-selected={isActive}
             aria-label={`Switch to ${tab.label} tab`}
             role="tab"
-            className={`flex items-center gap-2 px-4 py-3 font-medium text-sm transition-colors relative disabled:opacity-50 disabled:cursor-not-allowed ${
+            className={`flex items-center gap-2 px-4 py-3 font-medium text-sm transition-colors relative disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap ${
               isActive
                 ? "text-blue-600"
                 : "text-gray-600 hover:text-gray-900"

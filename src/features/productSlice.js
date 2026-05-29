@@ -16,7 +16,6 @@ export const getAllProducts = createAsyncThunk(
           },
         },
       );
-      console.log(response.data);
       return response.data;
     } catch (error) {
       return rejectWithValue(
@@ -75,7 +74,7 @@ export const deleteProduct = createAsyncThunk(
   async (productId, { rejectWithValue }) => {
     try {
       const response = await axios.delete(
-        `${baseUrl}${API_PATH.PRODUCT.DELETE}/${productId}`,
+        `${baseUrl}${API_PATH.PRODUCT.DELETE(productId)}`,
         {
           headers: {
             "Content-Type": "application/json",

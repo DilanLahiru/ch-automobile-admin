@@ -10,16 +10,13 @@ import { Button } from './ui/Button'
 import { Input } from './ui/Input'
 import { Dialog } from './ui/Dialog'
 import { useDispatch, useSelector } from "react-redux";
-import { updateProduct } from "../features/productSlice";
+import { updateProduct, deleteProduct } from "../features/productSlice";
 import { toast } from "react-toastify";
+import { Trash2 } from 'lucide-react';
 
-export function UpdateProductDialog({ open, onClose, product, onUpdateProduct }) {
+export function UpdateProductDialog({ open, onClose, product, onUpdateProduct, onDeleteProduct }) {
   const dispatch = useDispatch();
   const { loading } = useSelector((state) => state.product);
-
-  console.log('====================================');
-  console.log(product);
-  console.log('====================================');
   
   const [formData, setFormData] = useState({
     quantity: '',
@@ -85,8 +82,6 @@ export function UpdateProductDialog({ open, onClose, product, onUpdateProduct })
         initialStock: parseInt(formData.initialStock),
         minimumStock: parseInt(formData.minimumStock),
       }
-
-      console.log('Updating product:', productData)
       
       const result = await dispatch(updateProduct(productData)).unwrap()
       
@@ -96,7 +91,6 @@ export function UpdateProductDialog({ open, onClose, product, onUpdateProduct })
       onUpdateProduct && onUpdateProduct(result)
       
     } catch (error) {
-      console.log('Error updating product:', error)
       const errorMessage = error || 'Failed to update product. Please try again.'
       toast.error(errorMessage)
       setErrors(prev => ({ ...prev, submit: errorMessage }))
@@ -112,6 +106,29 @@ export function UpdateProductDialog({ open, onClose, product, onUpdateProduct })
     // Clear error for this field
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: null }))
+    }
+  }
+
+  // Handle delete product
+  const handleDelete = async () => {
+    if (!window.confirm(`Are you sure you want to delete "${product?.name}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      await dispatch(deleteProduct(product._id)).unwrap();
+      toast.success('Product deleted successfully!');
+      handleClose();
+      onDeleteProduct && onDeleteProduct(product._id);
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      const errorMessage = error || 'Failed to delete product. Please try again.';
+      toast.error(errorMessage);
+      setErrors(prev => ({ ...prev, submit: errorMessage }));
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -276,6 +293,18 @@ export function UpdateProductDialog({ open, onClose, product, onUpdateProduct })
             Update Product
           </Button>
         </div>
+
+        {/* Delete Button */}
+        <Button
+          type="button"
+          variant="destructive"
+          onClick={handleDelete}
+          disabled={isSubmitting || loading}
+          className="w-full flex items-center justify-center gap-2"
+        >
+          <Trash2 className="h-4 w-4" />
+          Remove Product
+        </Button>
       </form>
     </Dialog>
   )

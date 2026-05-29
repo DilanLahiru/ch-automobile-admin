@@ -14,7 +14,6 @@ export const getAllServiceTypes = createAsyncThunk(
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
-      console.log(response.data);
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to fetch category data");
@@ -36,6 +35,42 @@ export const createServiceType = createAsyncThunk(
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to create service type");
+    }
+  }
+);
+
+// Async Thunk for Update Service Type
+export const updateServiceType = createAsyncThunk(
+  "serviceType/update",
+  async ({ id, serviceTypeData }, { rejectWithValue }) => {
+    try {
+      const response = await axios.put(`${baseUrl}${API_PATH.SERVICE_TYPE.UPDATE(id)}`, serviceTypeData, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || "Failed to update service type");
+    }
+  }
+);
+
+// Async Thunk for Delete Service Type
+export const deleteServiceType = createAsyncThunk(
+  "serviceType/delete",
+  async (id, { rejectWithValue }) => {
+    try {
+      const response = await axios.delete(`${baseUrl}${API_PATH.SERVICE_TYPE.DELETE(id)}`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      return id;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || "Failed to delete service type");
     }
   }
 );
@@ -79,11 +114,46 @@ const serviceTypeSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       });
+
+    // Handle Update Service Type
+    builder
+      .addCase(updateServiceType.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(updateServiceType.fulfilled, (state, action) => {
+        state.loading = false;
+        state.serviceTypes = state.serviceTypes.map((item) =>
+          item._id === action.payload._id ? action.payload : item
+        );
+      })
+      .addCase(updateServiceType.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      });
+
+    // Handle Delete Service Type
+    builder
+      .addCase(deleteServiceType.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(deleteServiceType.fulfilled, (state, action) => {
+        state.loading = false;
+        state.serviceTypes = state.serviceTypes.filter(
+          (item) => item._id !== action.payload
+        );
+      })
+      .addCase(deleteServiceType.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      });
   },
 });
 
-// Export Selector
+// Export Selectors
 export const selectServiceType = (state) => state.serviceType;
+export const selectServiceTypes = (state) => state.serviceType.serviceTypes;
+export const selectServiceTypeLoading = (state) => state.serviceType.loading;
+export const selectServiceTypeError = (state) => state.serviceType.error;
 
 // Export Reducer
 export default serviceTypeSlice.reducer;   

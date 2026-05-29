@@ -20,6 +20,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { getAllEmployee } from "../../features/employeeSlice";
 import { getAllAppointments } from "../../features/appointmentSlice";
 import { getAllProducts } from "../../features/productSlice";
+import { getAllServiceTypes, selectServiceTypes } from "../../features/serviceTypeSlice";
+import { getAllOtherCharges, selectOtherCharges } from "../../features/otherChargesSlice";
 import { createServiceOrder } from "../../features/serviceOrderSlice";
 import { toast } from "react-toastify";
 import {
@@ -43,6 +45,8 @@ export function ServiceOrderPage() {
   const { isLoading: isLoadingServiceOrder } = useSelector(
     (state) => state.serviceOrder,
   );
+  const serviceTypes = useSelector(selectServiceTypes);
+  const otherCharges = useSelector(selectOtherCharges);
 
   // State for multiple repairs
   const [repairs, setRepairs] = useState([]);
@@ -57,13 +61,14 @@ export function ServiceOrderPage() {
     loadDraftRepairs();
   }, []);
 
+  useEffect(() => {
+    dispatch(getAllOtherCharges());
+  }, [dispatch]);
+
   // Update available vehicles when appointments load
   useEffect(() => {
     if (appointmentsFromRedux && appointmentsFromRedux.length > 0) {
       const vehicles = processAvailableVehicles(appointmentsFromRedux);
-      console.log('====================================');
-      console.log(vehicles);
-      console.log('====================================');
       setAvailableVehicles(vehicles);
     }
   }, [appointmentsFromRedux]);
@@ -85,6 +90,8 @@ export function ServiceOrderPage() {
         dispatch(getAllEmployee()),
         dispatch(getAllAppointments()),
         dispatch(getAllProducts()),
+        dispatch(getAllServiceTypes()),
+        dispatch(getAllOtherCharges()),
       ]);
     } catch (error) {
       console.error("Error loading details:", error);
@@ -123,7 +130,6 @@ export function ServiceOrderPage() {
 
   const processAvailableVehicles = (appointments) => {
     if (!Array.isArray(appointments)) return [];
-    console.log("processAvailableVehicles: ", appointments);
     // Filter for unique vehicles and appointments that are ready for service
     const uniqueVehicles = new Map();
 
@@ -181,8 +187,12 @@ export function ServiceOrderPage() {
       id: Date.now(),
       vehicleNumber: "",
       employeeId: "",
+      serviceTypeId: "",
+      servicePrice: 0,
       serviceDescription: "",
       laborCost: 0,
+      paymentType: "",
+      otherCharges: [], // Array to store multiple charges
       parts: [], // Initialize with empty array
       status: "pending",
       createdAt: new Date().toISOString(),
@@ -195,11 +205,16 @@ export function ServiceOrderPage() {
     id: "",
     vehicleNumber: "",
     employeeId: "",
+    serviceTypeId: "",
+    servicePrice: 0,
     serviceDescription: "",
     laborCost: 4500,
+    paymentType: "",
+    otherCharges: [],
     parts: [],
     status: "pending",
     createdAt: "",
+    serviceType: "",
   };
 
   // Employee methods
@@ -298,13 +313,32 @@ export function ServiceOrderPage() {
     setRepairs(updatedRepairs);
   };
 
+  const handleServiceTypeChange = (serviceTypeId) => {
+    const selectedServiceType = serviceTypes.find(
+      (st) => st._id === serviceTypeId
+    );
+    const updatedRepairs = [...repairs];
+    updatedRepairs[currentRepairIndex] = {
+      ...updatedRepairs[currentRepairIndex],
+      serviceTypeId: serviceTypeId,
+      serviceType: selectedServiceType?.name || 'General Service',
+      servicePrice: selectedServiceType ? selectedServiceType.price : 0,
+      laborCost: selectedServiceType ? selectedServiceType.price : 0,
+    };
+    setRepairs(updatedRepairs);
+  };
+
   const handleAddNewRepair = () => {
     const newRepair = {
       id: Date.now(),
       vehicleNumber: "",
       employeeId: "",
+      serviceTypeId: "",
+      servicePrice: 0,
       serviceDescription: "",
       laborCost: 0,
+      paymentType: "",
+      otherCharges: [], // Array to store multiple charges
       parts: [], // Initialize with empty array
       status: "pending",
       createdAt: new Date().toISOString(),
@@ -325,7 +359,7 @@ export function ServiceOrderPage() {
     }
   };
 
-  const calculateRepairTotal = (repair) => {
+  const getRepairSubtotal = (repair) => {
     if (!repair) return 0;
 
     const parts = repair.parts || [];
@@ -337,6 +371,85 @@ export function ServiceOrderPage() {
 
     const laborCost = parseFloat(repair.laborCost) || 0;
     return partsTotal + laborCost;
+  };
+
+  const calculateCardProcessingFee = (repair) => {
+    if (!repair || repair.paymentType !== "card") return 0;
+    const subtotal = getRepairSubtotal(repair);
+    return subtotal * 0.03;
+  };
+
+  const getOtherChargeAmount = (repair) => {
+    if (!repair || !repair.otherCharges || repair.otherCharges.length === 0) return 0;
+    return repair.otherCharges.reduce((total, charge) => {
+      return total + (parseFloat(charge.amount) || 0);
+    }, 0);
+  };
+
+  const handleAddOtherCharge = (chargeId) => {
+    if (!chargeId) return;
+    
+    const selectedCharge = otherCharges?.find((c) => c._id === chargeId);
+    if (!selectedCharge) return;
+
+    // Check if charge already added
+    if (currentRepair.otherCharges?.some((c) => c._id === chargeId)) {
+      toast.warning("This charge is already added");
+      return;
+    }
+
+    const updatedRepairs = [...repairs];
+    updatedRepairs[currentRepairIndex] = {
+      ...updatedRepairs[currentRepairIndex],
+      otherCharges: [
+        ...(updatedRepairs[currentRepairIndex].otherCharges || []),
+        {
+          _id: selectedCharge._id,
+          chargeType: selectedCharge.chargeType || selectedCharge.type,
+          amount: parseFloat(selectedCharge.amount) || 0,
+        },
+      ],
+    };
+    setRepairs(updatedRepairs);
+    toast.success("Charge added");
+  };
+
+  const handleRemoveOtherCharge = (chargeId) => {
+    const updatedRepairs = [...repairs];
+    updatedRepairs[currentRepairIndex] = {
+      ...updatedRepairs[currentRepairIndex],
+      otherCharges: (updatedRepairs[currentRepairIndex].otherCharges || []).filter(
+        (c) => c._id !== chargeId
+      ),
+    };
+    setRepairs(updatedRepairs);
+    toast.success("Charge removed");
+  };
+
+  const handleUpdateOtherChargeAmount = (chargeId, newAmount) => {
+    const updatedRepairs = [...repairs];
+    const chargeIndex = (updatedRepairs[currentRepairIndex].otherCharges || []).findIndex(
+      (c) => c._id === chargeId
+    );
+    if (chargeIndex >= 0) {
+      const parsedAmount = parseFloat(newAmount);
+      updatedRepairs[currentRepairIndex].otherCharges[chargeIndex].amount =
+        !isNaN(parsedAmount) && parsedAmount >= 0 ? parsedAmount : 0;
+      setRepairs(updatedRepairs);
+    }
+  };
+
+  const calculateRepairTotal = (repair) => {
+    if (!repair) return 0;
+    
+    const subtotal = getRepairSubtotal(repair);
+    const fee = calculateCardProcessingFee(repair);
+    const otherChargeAmount = getOtherChargeAmount(repair);
+    return subtotal + fee + otherChargeAmount;
+  };
+
+  const calculateTotalWithFee = (repair) => {
+    return calculateRepairTotal(repair);
   };
 
   const calculateGrandTotal = () => {
@@ -403,6 +516,13 @@ export function ServiceOrderPage() {
       employeeId: currentRepair.employeeId,
       serviceDescription: currentRepair.serviceDescription,
       laborCost: parseFloat(currentRepair.laborCost) || 0,
+      paymentType: currentRepair.paymentType || "",
+      cardProcessingFee: calculateCardProcessingFee(currentRepair),
+      otherCharges: (currentRepair.otherCharges || []).map((charge) => ({
+        _id: charge._id,
+        chargeType: charge.chargeType,
+        amount: charge.amount,
+      })), // Total of all charges
       parts: (currentRepair.parts || []).map((part) => ({
         _id: part._id,
         name: part.name,
@@ -411,6 +531,8 @@ export function ServiceOrderPage() {
       })),
       status: "completed",
       totalAmount: calculateRepairTotal(currentRepair),
+      serviceTypeId: currentRepair.serviceTypeId,
+      serviceType: currentRepair.serviceType || 'General Service',
     };
 
     try {
@@ -438,9 +560,15 @@ export function ServiceOrderPage() {
         } : null,
         serviceDescription: currentRepair.serviceDescription,
         laborCost: parseFloat(currentRepair.laborCost) || 0,
+        paymentType: currentRepair.paymentType || "",
+        cardProcessingFee: calculateCardProcessingFee(currentRepair),
+        otherCharges: currentRepair.otherCharges || [],
+        otherChargeAmount: getOtherChargeAmount(currentRepair),
         parts: currentRepair.parts || [],
         status: "completed",
         totalAmount: calculateRepairTotal(currentRepair),
+        serviceType: currentRepair.serviceType,
+        serviceTypeId: currentRepair.serviceTypeId,
       };
 
       // Store the completed service order for PDF download/print
@@ -715,7 +843,119 @@ export function ServiceOrderPage() {
                     </p>
                   )}
                 </div>
+
+                {/* Service Type Selection */}
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                    Select Service Type
+                  </label>
+                  <select
+                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    value={currentRepair.serviceTypeId || ""}
+                    onChange={(e) => handleServiceTypeChange(e.target.value)}
+                  >
+                    <option value="">-- Select Service Type --</option>
+                    {serviceTypes && serviceTypes.length > 0 ? (
+                      serviceTypes.map((st) => (
+                        <option key={st._id} value={st._id}>
+                          {st.name} - Rs. {(st.price || 0).toFixed(2)}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="" disabled>
+                        No service types available
+                      </option>
+                    )}
+                  </select>
+                </div>
+
+                {/* Payment Type Selection */}
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                    Payment Type
+                  </label>
+                  <select
+                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    value={currentRepair.paymentType || ""}
+                    onChange={(e) =>
+                      handleUpdateRepairField("paymentType", e.target.value)
+                    }
+                  >
+                    <option value="">-- Select Payment Type --</option>
+                    <option value="cash">Cash</option>
+                    <option value="card">Card</option>
+                    <option value="bank-transfer">Bank Transfer</option>
+                  </select>
+                </div>
+
+                {/* Other Charges Selection */}
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                    Other Charges (Optional)
+                  </label>
+                  <select
+                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        handleAddOtherCharge(e.target.value);
+                        e.target.value = "";
+                      }
+                    }}
+                  >
+                    <option value="">-- Add Charge --</option>
+                    {otherCharges && otherCharges.length > 0 ? (
+                      otherCharges
+                        .filter(charge => !currentRepair.otherCharges?.some(c => c._id === charge._id))
+                        .map((charge) => (
+                          <option key={charge._id} value={charge._id}>
+                            {charge.chargeType || charge.type} - Rs. {(parseFloat(charge.amount) || 0).toFixed(2)}
+                          </option>
+                        ))
+                    ) : (
+                      <option value="" disabled>
+                        No charges available
+                      </option>
+                    )}
+                  </select>
+                </div>
               </div>
+
+              {/* Other Charges List */}
+              {currentRepair.otherCharges && currentRepair.otherCharges.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="text-sm font-medium text-gray-700 mb-3">Selected Charges</h4>
+                  <div className="space-y-2">
+                    {currentRepair.otherCharges.map((charge) => (
+                      <div
+                        key={charge._id}
+                        className="flex items-center justify-between p-3 bg-purple-50 border border-purple-200 rounded-lg"
+                      >
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-purple-900">{charge.chargeType}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={parseFloat(charge.amount) || 0}
+                            onChange={(e) =>
+                              handleUpdateOtherChargeAmount(charge._id, e.target.value)
+                            }
+                            className="w-24 px-2 py-1 border border-purple-300 rounded text-sm text-right"
+                          />
+                          <button
+                            onClick={() => handleRemoveOtherCharge(charge._id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Vehicle Details Summary */}
               {getSelectedVehicle() && (
@@ -872,7 +1112,7 @@ export function ServiceOrderPage() {
           {/* Service Description */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-gray-700">
-              Service Description
+              Service Report
             </label>
             <textarea
               className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -904,12 +1144,33 @@ export function ServiceOrderPage() {
                     {getSelectedEmployee()?.name || "Not assigned"}
                   </span>
                 </div>
+                {currentRepair.serviceTypeId && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Service Type:</span>
+                    <span className="font-medium">
+                      {serviceTypes.find(st => st._id === currentRepair.serviceTypeId)?.name || "Unknown"}
+                    </span>
+                  </div>
+                )}
+                {currentRepair.paymentType && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Payment Type:</span>
+                    <span className="font-medium capitalize">
+                      {currentRepair.paymentType === "bank-transfer" ? "Bank Transfer" : currentRepair.paymentType}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="border-t border-gray-100 pt-4 space-y-3">
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                    Labor Cost (Rs.)
+                    Service Charge (Rs.)
+                    {currentRepair.serviceTypeId && (
+                      <span className="text-xs text-gray-500 ml-1">
+                        (Set from Service Type)
+                      </span>
+                    )}
                   </label>
                   <Input
                     type="number"
@@ -921,6 +1182,11 @@ export function ServiceOrderPage() {
                     }
                     placeholder="0.00"
                   />
+                  {currentRepair.serviceTypeId && (
+                    <p className="text-xs text-blue-600 mt-1">
+                      Auto-populated from: {serviceTypes.find(st => st._id === currentRepair.serviceTypeId)?.name} (Rs. {serviceTypes.find(st => st._id === currentRepair.serviceTypeId)?.price?.toFixed(2)})
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -943,12 +1209,50 @@ export function ServiceOrderPage() {
                     Rs. {(parseFloat(currentRepair.laborCost) || 0).toFixed(2)}
                   </span>
                 </div>
-                <div className="flex justify-between text-base font-bold text-gray-900 pt-2 border-t border-gray-100">
-                  <span>Repair Total:</span>
+                <div className="flex justify-between text-base font-semibold text-gray-900 pt-2 border-t border-gray-100">
+                  <span>Subtotal:</span>
                   <span>
-                    Rs. {calculateRepairTotal(currentRepair).toFixed(2)}
+                    Rs. {getRepairSubtotal(currentRepair).toFixed(2)}
                   </span>
                 </div>
+                {currentRepair.paymentType === "card" && (
+                  <>
+                    <div className="flex justify-between text-sm text-orange-600 bg-orange-50 px-3 py-2 rounded">
+                      <span>Card Processing Fee (3%):</span>
+                      <span className="font-medium">
+                        Rs. {calculateCardProcessingFee(currentRepair).toFixed(2)}
+                      </span>
+                    </div>
+                  </>
+                )}
+                {currentRepair.otherCharges && currentRepair.otherCharges.length > 0 && (
+                  <>
+                    {currentRepair.otherCharges.map((charge) => (
+                      <div key={charge._id} className="flex justify-between text-sm text-purple-600 bg-purple-50 px-3 py-2 rounded">
+                        <span>{charge.chargeType}:</span>
+                        <span className="font-medium">
+                          Rs. {(parseFloat(charge.amount) || 0).toFixed(2)}
+                        </span>
+                      </div>
+                    ))}
+                  </>
+                )}
+                {currentRepair.paymentType === "card" && (
+                  <div className="flex justify-between text-lg font-bold text-orange-700 bg-orange-100 px-3 py-3 rounded">
+                    <span>Final Total:</span>
+                    <span>
+                      Rs. {calculateRepairTotal(currentRepair).toFixed(2)}
+                    </span>
+                  </div>
+                )}
+                {currentRepair.paymentType && currentRepair.paymentType !== "card" && (
+                  <div className="flex justify-between text-lg font-bold text-blue-900 bg-blue-100 px-3 py-3 rounded">
+                    <span>Total Amount:</span>
+                    <span>
+                      Rs. {calculateRepairTotal(currentRepair).toFixed(2)}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="pt-4 space-y-2 border-t border-gray-100">
@@ -999,7 +1303,7 @@ export function ServiceOrderPage() {
             <div className="space-y-4">
               <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg">
                 <p className="text-sm text-gray-600 mb-2">
-                  Current Repair Total
+                  {currentRepair.paymentType === "card" ? "Final Total (with 3% card fee)" : "Total Amount"}
                 </p>
                 <p className="text-3xl font-bold text-blue-900">
                   Rs. {calculateRepairTotal(currentRepair).toFixed(2)}

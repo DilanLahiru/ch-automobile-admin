@@ -5,6 +5,8 @@ import { TabNavigation } from "./components/TabNavigation";
 import { ProfileSection } from "./sections/ProfileSection";
 import { PasswordSection } from "./sections/PasswordSection";
 import { RepairHistorySection } from "./sections/RepairHistorySection";
+import { ServiceTypeSection } from "./sections/ServiceTypeSection";
+import { OtherChargesSection } from "./sections/OtherChargesSection";
 
 /**
  * SettingsPage Component
@@ -28,6 +30,10 @@ export function SettingsPage() {
         return <PasswordSection />;
       case "repairs":
         return <RepairHistorySection />;
+      case "service-types":
+        return <ServiceTypeSection />;
+      case "other-charges":
+        return <OtherChargesSection />;
       default:
         return <ProfileSection user={user} />;
     }
@@ -39,7 +45,7 @@ export function SettingsPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
         <p className="text-gray-600 mt-2">
-          Manage your profile, security, and repair history
+          Manage your profile, security, repair history, service types, and other charges
         </p>
       </div>
 
@@ -56,3 +62,4 @@ export function SettingsPage() {
     </div>
   );
 }
+
