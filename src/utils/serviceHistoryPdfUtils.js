@@ -1,7 +1,6 @@
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import InvoiceLogo from "../assets/InvoiceLogo.png";
-import QRCode from "../assets/QRCode.png";
 
 // Dynamically load QRCode if it exists
 let QRCode = "";
