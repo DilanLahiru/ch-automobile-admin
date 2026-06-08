@@ -2,13 +2,6 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import InvoiceLogo from "../assets/InvoiceLogo.png";
 
-// Dynamically load QRCode if it exists
-let QRCode = "";
-const qrModules = import.meta.glob("../assets/QRCode.png", { eager: true, import: "default" });
-if (Object.keys(qrModules).length) {
-  QRCode = Object.values(qrModules)[0];
-}
-
 /**
  * Utility function to format currency (PKR)
  */
@@ -856,7 +849,7 @@ const generateServiceHistoryHTML = (serviceOrder) => {
       <div class="terms-qr-row">
         <!-- QR code on the left side -->
         <div class="qr-left">
-          <img src="${QRCode}" alt="Payment QR Code" style="width:100px; height:100px;">
+          <img src="https://res.cloudinary.com/dhcx6uyxp/image/upload/v1780938341/Untitled_ahxlq5.png" alt="Payment QR Code" style="width:100px; height:100px;">
         </div>
         <!-- Terms & Conditions text on the right -->
         <div class="terms-right">
