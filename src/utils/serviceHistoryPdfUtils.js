@@ -3,6 +3,13 @@ import html2canvas from "html2canvas";
 import InvoiceLogo from "../assets/InvoiceLogo.png";
 import QRCode from "../assets/QRCode.png";
 
+// Dynamically load QRCode if it exists
+let QRCode = "";
+const qrModules = import.meta.glob("../assets/QRCode.png", { eager: true, import: "default" });
+if (Object.keys(qrModules).length) {
+  QRCode = Object.values(qrModules)[0];
+}
+
 /**
  * Utility function to format currency (PKR)
  */
