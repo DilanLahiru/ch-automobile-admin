@@ -20,7 +20,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { getAllEmployee } from "../../features/employeeSlice";
 import { getAllAppointments } from "../../features/appointmentSlice";
 import { getAllProducts } from "../../features/productSlice";
-import { getAllServiceTypes, selectServiceTypes } from "../../features/serviceTypeSlice";
+import { getAllServiceTypes, createServiceType, selectServiceTypes } from "../../features/serviceTypeSlice";
 import { getAllOtherCharges, selectOtherCharges } from "../../features/otherChargesSlice";
 import { createServiceOrder } from "../../features/serviceOrderSlice";
 import { toast } from "react-toastify";
@@ -51,6 +51,10 @@ export function ServiceOrderPage() {
   // State for multiple repairs
   const [repairs, setRepairs] = useState([]);
   const [currentRepairIndex, setCurrentRepairIndex] = useState(0);
+  const [showNewServiceTypeForm, setShowNewServiceTypeForm] = useState(false);
+  const [newServiceTypeName, setNewServiceTypeName] = useState("");
+  const [newServiceTypePrice, setNewServiceTypePrice] = useState("");
+  const [isSavingServiceType, setIsSavingServiceType] = useState(false);
   const [availableVehicles, setAvailableVehicles] = useState([]);
   const [draftRepairs, setDraftRepairs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -314,6 +318,13 @@ export function ServiceOrderPage() {
   };
 
   const handleServiceTypeChange = (serviceTypeId) => {
+    if (serviceTypeId === "__other__") {
+      setShowNewServiceTypeForm(true);
+      setNewServiceTypeName("");
+      setNewServiceTypePrice("");
+      return;
+    }
+    setShowNewServiceTypeForm(false);
     const selectedServiceType = serviceTypes.find(
       (st) => st._id === serviceTypeId
     );
@@ -326,6 +337,43 @@ export function ServiceOrderPage() {
       laborCost: selectedServiceType ? selectedServiceType.price : 0,
     };
     setRepairs(updatedRepairs);
+  };
+
+  const handleSaveNewServiceType = async () => {
+    if (!newServiceTypeName.trim()) {
+      toast.error("Please enter a service type name");
+      return;
+    }
+    const price = parseFloat(newServiceTypePrice);
+    if (isNaN(price) || price < 0) {
+      toast.error("Please enter a valid price");
+      return;
+    }
+    setIsSavingServiceType(true);
+    try {
+      const result = await dispatch(
+        createServiceType({ name: newServiceTypeName.trim(), price })
+      ).unwrap();
+      // Auto-select the newly created service type
+      const updatedRepairs = [...repairs];
+      updatedRepairs[currentRepairIndex] = {
+        ...updatedRepairs[currentRepairIndex],
+        serviceTypeId: result._id,
+        serviceType: result.name,
+        servicePrice: result.price || 0,
+        laborCost: result.price || 0,
+      };
+      setRepairs(updatedRepairs);
+      setShowNewServiceTypeForm(false);
+      setNewServiceTypeName("");
+      setNewServiceTypePrice("");
+      dispatch(getAllServiceTypes());
+      toast.success(`Service type "${result.name}" created and selected`);
+    } catch (error) {
+      toast.error("Failed to save service type");
+    } finally {
+      setIsSavingServiceType(false);
+    }
   };
 
   const handleAddNewRepair = () => {
@@ -498,10 +546,10 @@ export function ServiceOrderPage() {
     }
 
     // Validate that parts have been added
-    if (!currentRepair.parts || currentRepair.parts.length === 0) {
-      toast.error("Please add Parts & Materials before completing the repair");
-      return;
-    }
+    // if (!currentRepair.parts || currentRepair.parts.length === 0) {
+    //   toast.error("Please add Parts & Materials before completing the repair");
+    //   return;
+    // }
 
     // Get vehicle details for the current repair
     const currentVehicle = availableVehicles.find(
@@ -750,7 +798,7 @@ export function ServiceOrderPage() {
           {repairs.map((repair, index) => (
             <button
               key={repair.id || index}
-              onClick={() => setCurrentRepairIndex(index)}
+              onClick={() => { setCurrentRepairIndex(index); setShowNewServiceTypeForm(false); }}
               className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors relative ${
                 currentRepairIndex === index
                   ? "bg-blue-100 text-blue-700 border-b-2 border-blue-700"
@@ -851,7 +899,7 @@ export function ServiceOrderPage() {
                   </label>
                   <select
                     className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    value={currentRepair.serviceTypeId || ""}
+                    value={showNewServiceTypeForm ? "__other__" : (currentRepair.serviceTypeId || "")}
                     onChange={(e) => handleServiceTypeChange(e.target.value)}
                   >
                     <option value="">-- Select Service Type --</option>
@@ -866,7 +914,48 @@ export function ServiceOrderPage() {
                         No service types available
                       </option>
                     )}
+                    <option value="__other__">Other (Add New)</option>
                   </select>
+                  {showNewServiceTypeForm && (
+                    <div className="mt-3 p-3 border border-blue-200 rounded-lg bg-blue-50 space-y-3">
+                      <p className="text-xs font-medium text-blue-700">New Service Type</p>
+                      <input
+                        type="text"
+                        placeholder="Service type name"
+                        value={newServiceTypeName}
+                        onChange={(e) => setNewServiceTypeName(e.target.value)}
+                        className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                      <input
+                        type="number"
+                        placeholder="Price (Rs.)"
+                        min="0"
+                        step="0.01"
+                        value={newServiceTypePrice}
+                        onChange={(e) => setNewServiceTypePrice(e.target.value)}
+                        className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleSaveNewServiceType}
+                          disabled={isSavingServiceType}
+                          className="flex-1 px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 rounded-lg transition-colors"
+                        >
+                          {isSavingServiceType ? "Saving..." : "Save & Select"}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowNewServiceTypeForm(false);
+                            setNewServiceTypeName("");
+                            setNewServiceTypePrice("");
+                          }}
+                          className="px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Payment Type Selection */}
@@ -1318,7 +1407,7 @@ export function ServiceOrderPage() {
               </div> */}
 
               <div className="space-y-3">
-                {currentRepair.parts && currentRepair.parts.length > 0 && currentRepair.employeeId ? (
+                {currentRepair.employeeId ? (
                   <Button
                     className="w-full"
                     onClick={handleCreateServiceOrder}
