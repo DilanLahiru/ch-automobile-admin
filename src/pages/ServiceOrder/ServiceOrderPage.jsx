@@ -52,6 +52,7 @@ export function ServiceOrderPage() {
   const [repairs, setRepairs] = useState([]);
   const [currentRepairIndex, setCurrentRepairIndex] = useState(0);
   const [showNewServiceTypeForm, setShowNewServiceTypeForm] = useState(false);
+  const [activeServiceTypeEntryId, setActiveServiceTypeEntryId] = useState(null);
   const [newServiceTypeName, setNewServiceTypeName] = useState("");
   const [newServiceTypePrice, setNewServiceTypePrice] = useState("");
   const [isSavingServiceType, setIsSavingServiceType] = useState(false);
@@ -59,10 +60,12 @@ export function ServiceOrderPage() {
   const [draftRepairs, setDraftRepairs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [completedServiceOrder, setCompletedServiceOrder] = useState(null);
+  const [invoiceNumber, setInvoiceNumber] = useState("");
 
   useEffect(() => {
     loadAllDetails();
     loadDraftRepairs();
+    generateInvoiceNumber();
   }, []);
 
   useEffect(() => {
@@ -132,6 +135,12 @@ export function ServiceOrderPage() {
     toast.success("Draft deleted");
   };
 
+  // Genarate random invoice number
+  const generateInvoiceNumber = () => {
+    const randomNumber = Math.floor(Math.random() * 1000000);
+    setInvoiceNumber('INV-' + randomNumber);
+  };
+
   const processAvailableVehicles = (appointments) => {
     if (!Array.isArray(appointments)) return [];
     // Filter for unique vehicles and appointments that are ready for service
@@ -159,6 +168,7 @@ export function ServiceOrderPage() {
               appt.customerName || appt.customer?.name || "Unknown Owner",
             customerId: appt.customerId || null,
             vehicleId: appt.vehicleId,
+            invoiceNumber: appt.invoiceNumber,
           });
         }
       }
@@ -186,8 +196,37 @@ export function ServiceOrderPage() {
     return Array.from(uniqueVehicles.values());
   };
 
+  const createServiceTypeEntry = (overrides = {}) => ({
+    id: Date.now() + Math.random(),
+    serviceTypeId: "",
+    serviceType: "",
+    servicePrice: 0,
+    laborCost: 0,
+    description: "",
+    ...overrides,
+  });
+
+  const buildRepairWithServiceTypeEntries = (repair) => {
+    const entries = Array.isArray(repair?.serviceTypeEntries) && repair.serviceTypeEntries.length > 0
+      ? repair.serviceTypeEntries
+      : [createServiceTypeEntry()];
+
+    const totalLaborCost = entries.reduce((sum, entry) => {
+      return sum + (parseFloat(entry.laborCost) || 0);
+    }, 0);
+
+    return {
+      ...repair,
+      serviceTypeEntries: entries,
+      serviceTypeId: entries[0]?.serviceTypeId || "",
+      serviceType: entries[0]?.serviceType || "",
+      servicePrice: entries[0]?.servicePrice || 0,
+      laborCost: totalLaborCost,
+    };
+  };
+
   const initializeNewRepair = () => {
-    const newRepair = {
+    const newRepair = buildRepairWithServiceTypeEntries({
       id: Date.now(),
       vehicleNumber: "",
       employeeId: "",
@@ -200,7 +239,9 @@ export function ServiceOrderPage() {
       parts: [], // Initialize with empty array
       status: "pending",
       createdAt: new Date().toISOString(),
-    };
+      invoiceNumber: "",
+      serviceTypeEntries: [createServiceTypeEntry()],
+    });
     setRepairs([newRepair]);
     setCurrentRepairIndex(0);
   };
@@ -219,6 +260,8 @@ export function ServiceOrderPage() {
     status: "pending",
     createdAt: "",
     serviceType: "",
+    serviceTypeEntries: [createServiceTypeEntry()],
+    invoiceNumber: "",
   };
 
   // Employee methods
@@ -317,25 +360,100 @@ export function ServiceOrderPage() {
     setRepairs(updatedRepairs);
   };
 
-  const handleServiceTypeChange = (serviceTypeId) => {
+  const handleAddServiceTypeEntry = () => {
+    const updatedRepairs = [...repairs];
+    const currentRepairData = updatedRepairs[currentRepairIndex] || {};
+    const entries = [
+      ...(currentRepairData.serviceTypeEntries || []),
+      createServiceTypeEntry(),
+    ];
+
+    updatedRepairs[currentRepairIndex] = buildRepairWithServiceTypeEntries({
+      ...currentRepairData,
+      serviceTypeEntries: entries,
+    });
+    setRepairs(updatedRepairs);
+  };
+
+  const handleRemoveServiceTypeEntry = (entryId) => {
+    const updatedRepairs = [...repairs];
+    const currentRepairData = updatedRepairs[currentRepairIndex] || {};
+    const entries = (currentRepairData.serviceTypeEntries || []).filter(
+      (entry) => entry.id !== entryId,
+    );
+
+    updatedRepairs[currentRepairIndex] = buildRepairWithServiceTypeEntries({
+      ...currentRepairData,
+      serviceTypeEntries: entries.length > 0 ? entries : [createServiceTypeEntry()],
+    });
+    setRepairs(updatedRepairs);
+  };
+
+  const handleServiceTypeEntryChange = (entryId, serviceTypeId) => {
     if (serviceTypeId === "__other__") {
+      setActiveServiceTypeEntryId(entryId);
       setShowNewServiceTypeForm(true);
       setNewServiceTypeName("");
       setNewServiceTypePrice("");
       return;
     }
+
     setShowNewServiceTypeForm(false);
-    const selectedServiceType = serviceTypes.find(
-      (st) => st._id === serviceTypeId
-    );
+    const selectedServiceType = serviceTypes.find((st) => st._id === serviceTypeId);
     const updatedRepairs = [...repairs];
-    updatedRepairs[currentRepairIndex] = {
-      ...updatedRepairs[currentRepairIndex],
-      serviceTypeId: serviceTypeId,
-      serviceType: selectedServiceType?.name || 'General Service',
-      servicePrice: selectedServiceType ? selectedServiceType.price : 0,
-      laborCost: selectedServiceType ? selectedServiceType.price : 0,
-    };
+    const currentRepairData = updatedRepairs[currentRepairIndex] || {};
+    const entries = (currentRepairData.serviceTypeEntries || []).map((entry) => {
+      if (entry.id !== entryId) return entry;
+      return {
+        ...entry,
+        serviceTypeId: serviceTypeId,
+        serviceType: selectedServiceType?.name || "General Service",
+        servicePrice: selectedServiceType ? selectedServiceType.price : 0,
+        laborCost: selectedServiceType ? selectedServiceType.price : 0,
+      };
+    });
+
+    updatedRepairs[currentRepairIndex] = buildRepairWithServiceTypeEntries({
+      ...currentRepairData,
+      serviceTypeEntries: entries.length > 0 ? entries : [createServiceTypeEntry()],
+    });
+    setRepairs(updatedRepairs);
+  };
+
+  const handleServiceTypeEntryDescriptionChange = (entryId, description) => {
+    const updatedRepairs = [...repairs];
+    const currentRepairData = updatedRepairs[currentRepairIndex] || {};
+    const entries = (currentRepairData.serviceTypeEntries || []).map((entry) => {
+      if (entry.id !== entryId) return entry;
+      return {
+        ...entry,
+        description,
+      };
+    });
+
+    updatedRepairs[currentRepairIndex] = buildRepairWithServiceTypeEntries({
+      ...currentRepairData,
+      serviceTypeEntries: entries.length > 0 ? entries : [createServiceTypeEntry()],
+    });
+    setRepairs(updatedRepairs);
+  };
+
+  const handleServiceTypeEntryChargeChange = (entryId, value) => {
+    const updatedRepairs = [...repairs];
+    const currentRepairData = updatedRepairs[currentRepairIndex] || {};
+    const entries = (currentRepairData.serviceTypeEntries || []).map((entry) => {
+      if (entry.id !== entryId) return entry;
+      const parsedValue = parseFloat(value);
+      return {
+        ...entry,
+        laborCost: !isNaN(parsedValue) && parsedValue >= 0 ? parsedValue : 0,
+      };
+    });
+
+    updatedRepairs[currentRepairIndex] = buildRepairWithServiceTypeEntries({
+      ...currentRepairData,
+      serviceTypeEntries: entries.length > 0 ? entries : [createServiceTypeEntry()],
+    });
     setRepairs(updatedRepairs);
   };
 
@@ -354,17 +472,31 @@ export function ServiceOrderPage() {
       const result = await dispatch(
         createServiceType({ name: newServiceTypeName.trim(), price })
       ).unwrap();
-      // Auto-select the newly created service type
       const updatedRepairs = [...repairs];
-      updatedRepairs[currentRepairIndex] = {
-        ...updatedRepairs[currentRepairIndex],
-        serviceTypeId: result._id,
-        serviceType: result.name,
-        servicePrice: result.price || 0,
-        laborCost: result.price || 0,
-      };
+      const currentRepairData = updatedRepairs[currentRepairIndex] || {};
+      const entries = (currentRepairData.serviceTypeEntries || []).map((entry) => {
+        if (entry.id !== activeServiceTypeEntryId) return entry;
+        return {
+          ...entry,
+          serviceTypeId: result._id,
+          serviceType: result.name,
+          servicePrice: result.price || 0,
+          laborCost: result.price || 0,
+        };
+      });
+
+      updatedRepairs[currentRepairIndex] = buildRepairWithServiceTypeEntries({
+        ...currentRepairData,
+        serviceTypeEntries: entries.length > 0 ? entries : [createServiceTypeEntry({
+          serviceTypeId: result._id,
+          serviceType: result.name,
+          servicePrice: result.price || 0,
+          laborCost: result.price || 0,
+        })],
+      });
       setRepairs(updatedRepairs);
       setShowNewServiceTypeForm(false);
+      setActiveServiceTypeEntryId(null);
       setNewServiceTypeName("");
       setNewServiceTypePrice("");
       dispatch(getAllServiceTypes());
@@ -377,7 +509,7 @@ export function ServiceOrderPage() {
   };
 
   const handleAddNewRepair = () => {
-    const newRepair = {
+    const newRepair = buildRepairWithServiceTypeEntries({
       id: Date.now(),
       vehicleNumber: "",
       employeeId: "",
@@ -390,7 +522,9 @@ export function ServiceOrderPage() {
       parts: [], // Initialize with empty array
       status: "pending",
       createdAt: new Date().toISOString(),
-    };
+      invoiceNumber: "",
+      serviceTypeEntries: [createServiceTypeEntry()],
+    });
     setRepairs([...repairs, newRepair]);
     setCurrentRepairIndex(repairs.length);
   };
@@ -545,6 +679,26 @@ export function ServiceOrderPage() {
       return;
     }
 
+    const serviceTypeEntries = (currentRepair.serviceTypeEntries || [])
+      .filter((entry) => entry.serviceTypeId || entry.description)
+      .map((entry) => ({
+        ...entry,
+        description: entry.description?.trim() || "",
+      }));
+
+    const serviceTypeSummary = serviceTypeEntries
+      .map((entry) => {
+        const detail = entry.description?.trim();
+        return detail ? `${entry.serviceType || "Service Type"}: ${detail}` : entry.serviceType || "Service Type";
+      })
+      .join(" | ");
+
+    // const combinedServiceDescription = [currentRepair.serviceDescription?.trim(), serviceTypeSummary]
+    //   .filter(Boolean)
+    //   .join(" | ");
+
+    const combinedServiceDescription = currentRepair.serviceDescription?.trim()
+
     // Validate that parts have been added
     // if (!currentRepair.parts || currentRepair.parts.length === 0) {
     //   toast.error("Please add Parts & Materials before completing the repair");
@@ -562,7 +716,7 @@ export function ServiceOrderPage() {
       vehicleNumber: currentRepair.vehicleNumber,
       customerId: currentVehicle?.customerId,
       employeeId: currentRepair.employeeId,
-      serviceDescription: currentRepair.serviceDescription,
+      serviceDescription: combinedServiceDescription,
       laborCost: parseFloat(currentRepair.laborCost) || 0,
       paymentType: currentRepair.paymentType || "",
       cardProcessingFee: calculateCardProcessingFee(currentRepair),
@@ -579,8 +733,10 @@ export function ServiceOrderPage() {
       })),
       status: "completed",
       totalAmount: calculateRepairTotal(currentRepair),
-      serviceTypeId: currentRepair.serviceTypeId,
-      serviceType: currentRepair.serviceType || 'General Service',
+      serviceTypeId: serviceTypeEntries[0]?.serviceTypeId || currentRepair.serviceTypeId,
+      serviceType: serviceTypeEntries[0]?.serviceType || currentRepair.serviceType || 'General Service',
+      serviceTypeEntries,
+      invoiceNumber: invoiceNumber,
     };
 
     try {
@@ -606,7 +762,7 @@ export function ServiceOrderPage() {
           position: selectedEmployee.position || "Technician",
           ...selectedEmployee,
         } : null,
-        serviceDescription: currentRepair.serviceDescription,
+        serviceDescription: combinedServiceDescription,
         laborCost: parseFloat(currentRepair.laborCost) || 0,
         paymentType: currentRepair.paymentType || "",
         cardProcessingFee: calculateCardProcessingFee(currentRepair),
@@ -615,8 +771,10 @@ export function ServiceOrderPage() {
         parts: currentRepair.parts || [],
         status: "completed",
         totalAmount: calculateRepairTotal(currentRepair),
-        serviceType: currentRepair.serviceType,
-        serviceTypeId: currentRepair.serviceTypeId,
+        serviceType: serviceTypeEntries[0]?.serviceType || currentRepair.serviceType,
+        serviceTypeId: serviceTypeEntries[0]?.serviceTypeId || currentRepair.serviceTypeId,
+        serviceTypeEntries,
+        invoiceNumber: invoiceNumber,
       };
 
       // Store the completed service order for PDF download/print
@@ -893,29 +1051,87 @@ export function ServiceOrderPage() {
                 </div>
 
                 {/* Service Type Selection */}
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                    Select Service Type
-                  </label>
-                  <select
-                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    value={showNewServiceTypeForm ? "__other__" : (currentRepair.serviceTypeId || "")}
-                    onChange={(e) => handleServiceTypeChange(e.target.value)}
-                  >
-                    <option value="">-- Select Service Type --</option>
-                    {serviceTypes && serviceTypes.length > 0 ? (
-                      serviceTypes.map((st) => (
-                        <option key={st._id} value={st._id}>
-                          {st.name} - Rs. {(st.price || 0).toFixed(2)}
-                        </option>
-                      ))
-                    ) : (
-                      <option value="" disabled>
-                        No service types available
-                      </option>
-                    )}
-                    <option value="__other__">Other (Add New)</option>
-                  </select>
+                <div className="sm:col-span-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Select Service Type
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleAddServiceTypeEntry}
+                      className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                    >
+                      + Add Service Type
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {(currentRepair.serviceTypeEntries || []).map((entry, entryIndex) => (
+                      <div key={entry.id} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <p className="text-sm font-medium text-gray-700">
+                            Service Type #{entryIndex + 1}
+                          </p>
+                          {(currentRepair.serviceTypeEntries || []).length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveServiceTypeEntry(entry.id)}
+                              className="text-sm text-red-600 hover:text-red-700"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
+                        <select
+                          className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          value={showNewServiceTypeForm && activeServiceTypeEntryId === entry.id ? "__other__" : (entry.serviceTypeId || "")}
+                          onChange={(e) => handleServiceTypeEntryChange(entry.id, e.target.value)}
+                        >
+                          <option value="">-- Select Service Type --</option>
+                          {serviceTypes && serviceTypes.length > 0 ? (
+                            serviceTypes.map((st) => (
+                              <option key={st._id} value={st._id}>
+                                {st.name} - Rs. {(st.price || 0).toFixed(2)}
+                              </option>
+                            ))
+                          ) : (
+                            <option value="" disabled>
+                              No service types available
+                            </option>
+                          )}
+                          <option value="__other__">Other (Add New)</option>
+                        </select>
+                        <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-gray-600">
+                              Service Charge (Rs.)
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={entry.laborCost ?? 0}
+                              onChange={(e) => handleServiceTypeEntryChargeChange(entry.id, e.target.value)}
+                              className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="mb-1 block text-xs font-medium text-gray-600">
+                              Details
+                            </label>
+                            <textarea
+                              rows={2}
+                              value={entry.description || ""}
+                              onChange={(e) => handleServiceTypeEntryDescriptionChange(entry.id, e.target.value)}
+                              placeholder="Describe what was done, such as 'Shock mount replaced - back left side'"
+                              className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
                   {showNewServiceTypeForm && (
                     <div className="mt-3 p-3 border border-blue-200 rounded-lg bg-blue-50 space-y-3">
                       <p className="text-xs font-medium text-blue-700">New Service Type</p>
@@ -946,6 +1162,7 @@ export function ServiceOrderPage() {
                         <button
                           onClick={() => {
                             setShowNewServiceTypeForm(false);
+                            setActiveServiceTypeEntryId(null);
                             setNewServiceTypeName("");
                             setNewServiceTypePrice("");
                           }}
@@ -1233,12 +1450,21 @@ export function ServiceOrderPage() {
                     {getSelectedEmployee()?.name || "Not assigned"}
                   </span>
                 </div>
-                {currentRepair.serviceTypeId && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Service Type:</span>
-                    <span className="font-medium">
-                      {serviceTypes.find(st => st._id === currentRepair.serviceTypeId)?.name || "Unknown"}
-                    </span>
+                {(currentRepair.serviceTypeEntries || []).some((entry) => entry.serviceTypeId) && (
+                  <div className="space-y-2">
+                    <span className="text-gray-600">Service Types:</span>
+                    <div className="space-y-2">
+                      {(currentRepair.serviceTypeEntries || []).filter((entry) => entry.serviceTypeId).map((entry) => (
+                        <div key={entry.id} className="rounded-md border border-gray-200 bg-gray-50 p-2 text-xs">
+                          <div className="font-medium text-gray-800">{entry.serviceType || "Service Type"}</div>
+                          {entry.description ? (
+                            <div className="text-gray-600 mt-1">{entry.description}</div>
+                          ) : (
+                            <div className="text-gray-400 mt-1">No details added</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
                 {currentRepair.paymentType && (
@@ -1254,28 +1480,19 @@ export function ServiceOrderPage() {
               <div className="border-t border-gray-100 pt-4 space-y-3">
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                    Service Charge (Rs.)
-                    {currentRepair.serviceTypeId && (
-                      <span className="text-xs text-gray-500 ml-1">
-                        (Set from Service Type)
-                      </span>
-                    )}
+                    Total Service Charge (Rs.)
                   </label>
                   <Input
                     type="number"
                     min="0"
-                    step="0"
-                    value={currentRepair.laborCost}
-                    onChange={(e) =>
-                      handleUpdateRepairField("laborCost", e.target.value)
-                    }
+                    step="0.01"
+                    value={parseFloat(currentRepair.laborCost || 0).toFixed(2)}
+                    disabled
                     placeholder="0.00"
                   />
-                  {currentRepair.serviceTypeId && (
-                    <p className="text-xs text-blue-600 mt-1">
-                      Auto-populated from: {serviceTypes.find(st => st._id === currentRepair.serviceTypeId)?.name} (Rs. {serviceTypes.find(st => st._id === currentRepair.serviceTypeId)?.price?.toFixed(2)})
-                    </p>
-                  )}
+                  <p className="text-xs text-blue-600 mt-1">
+                    Auto-calculated from each added service type entry.
+                  </p>
                 </div>
               </div>
 

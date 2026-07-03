@@ -34,12 +34,48 @@ const formatTime = (dateString) => {
   });
 };
 
-// Calculate 3% fee
-const calculateCardProcessingFee = (serviceOrder) => {
-  if (!serviceOrder) return 0;
-  const subtotal = serviceOrder.totalAmount || 0;
-  return subtotal * 0.03;
-};
+// Calculate 3% fee with parts and labor cost included in subtotal
+const getRepairSubtotal = (repair) => {
+    if (!repair) return 0;
+
+    const parts = repair.parts || [];
+    const partsTotal = parts.reduce((sum, part) => {
+      const price = part.price || 0;
+      const quantity = part.quantity || 0;
+      return sum + price * quantity;
+    }, 0);
+
+    const laborCost = parseFloat(repair.laborCost) || 0;
+    return partsTotal + laborCost;
+  };
+
+  const calculateCardProcessingFee = (repair) => {
+    if (!repair || repair.paymentType !== "card") return 0;
+    const subtotal = getRepairSubtotal(repair);
+    return subtotal * 0.03;
+  };
+
+  const getServiceTypeEntries = (serviceOrder) => {
+    if (Array.isArray(serviceOrder?.serviceTypeEntries) && serviceOrder.serviceTypeEntries.length > 0) {
+      return serviceOrder.serviceTypeEntries.map((entry) => ({
+        serviceType: entry.serviceType || "Service",
+        description: entry.description || "",
+        laborCost: parseFloat(entry.laborCost || entry.servicePrice || 0) || 0,
+      }));
+    }
+
+    if (serviceOrder?.serviceType || serviceOrder?.serviceDescription) {
+      return [
+        {
+          serviceType: serviceOrder.serviceType || "General Service",
+          description: serviceOrder.serviceDescription || "",
+          laborCost: parseFloat(serviceOrder.laborCost || 0) || 0,
+        },
+      ];
+    }
+
+    return [];
+  };
 
 /**
  * Generate professional HTML template for service history record with logo and blue theme
@@ -377,6 +413,26 @@ const calculateCardProcessingFee = (serviceOrder) => {
 // `;
 // };
 const generateServiceHistoryHTML = (serviceOrder) => {
+  const serviceEntries = getServiceTypeEntries(serviceOrder);
+  const serviceEntriesHTML = serviceEntries.length
+    ? serviceEntries
+        .map(
+          (entry) => `
+        <tr>
+          <td>
+            <div style="font-weight:600; color:#111827; font-size:10px;">${entry.serviceType || "Service"}</div>
+            ${entry.description ? `<div style="font-size:10px; color:#64748b; margin-top:4px;">${entry.description}</div>` : ""}
+          </td>
+          <td style="font-size:10px;">${formatCurrency(entry.laborCost || 0)}</td>
+          <td style="font-size:10px;">${formatCurrency(entry.laborCost || 0)}</td>
+        </tr>`,
+        )
+        .join("")
+    : `
+        <tr>
+          <td colspan="3" style="padding: 16px; text-align: center; color: #718096;">No service items recorded</td>
+        </tr>`;
+
   const partsHTML = serviceOrder.parts?.length
     ? serviceOrder.parts
         .map(
@@ -406,7 +462,7 @@ const generateServiceHistoryHTML = (serviceOrder) => {
   // Calculate total other charges (for summary, if needed)
   const otherChargesTotal = (serviceOrder.otherCharges || []).reduce(
     (sum, charge) => sum + (charge.amount || 0),
-    0
+    0,
   );
 
   return `
@@ -452,20 +508,22 @@ const generateServiceHistoryHTML = (serviceOrder) => {
     }
 
     .logo {
-      width: 300px;
+      width: 350px;
       margin-left: -50px;
     }
 
     .company {
       text-align: right;
       line-height: 1.8;
-      font-size: 12px;
+      font-size: 10px;
+      margin-top: 30px;
     }
 
     .company-info {
-      font-size: 12px;
-      margin-bottom: 8px;
+      font-size: 10px;
+      margin-bottom: 2px;
       font-weight: 500;
+      color:#666
     }
 
     .top-info {
@@ -481,13 +539,14 @@ const generateServiceHistoryHTML = (serviceOrder) => {
     .label {
       font-weight: 600;
       margin-bottom: 5px;
-      font-size: 13px;
+      font-size: 11px;
+      margin-left: 10px;
     }
 
     .small {
       color: #666;
       line-height: 1.7;
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 500;
     }
 
@@ -520,14 +579,14 @@ const generateServiceHistoryHTML = (serviceOrder) => {
 
     th {
       text-align: left;
-      padding: 14px;
+      padding: 8px 10px;
       border-bottom: 2px solid #ddd;
       font-size: 13px;
       font-weight: 600;
     }
 
     td {
-      padding: 18px 14px;
+      padding: 12px 10px;
       border-bottom: 1px solid #eee;
       font-size: 11px;
       font-weight: 500;
@@ -568,13 +627,14 @@ const generateServiceHistoryHTML = (serviceOrder) => {
     .total {
       font-size: 13px;
       font-weight: 700;
+      margin-top: 10px;
     }
 
     /* New bottom section: terms, bank, QR */
     .invoice-bottom {
-      margin-top: 40px;
+      margin-top: 10px;
       border-top: 1px solid #e2e8f0;
-      padding-top: 20px;
+      padding-top: 10px;
     }
 
     .terms-conditions {
@@ -738,10 +798,12 @@ const generateServiceHistoryHTML = (serviceOrder) => {
       </div>
       <div class="company">
         <div class="company-info">
-          304A Abhaya Street<br>
+          <strong style="color:#111827;">CH Automobile.</strong>
+          304A Abhaya Street
           Nagoda, Kalutara<br>
-          +94 71 427 4163<br>
-          chautomob@gmail.com
+          <strong style="color:#111827;">Co. Reg. No. </strong>: 4229<br>
+          <strong style="color:#111827;">Email: </strong>chautomob@gmail.com <strong style="color:#111827;">Phone: </strong> +94 71 427 4163<br>
+          <strong style="color:#111827;">Website: </strong>www.chautomobile.lk
         </div>
       </div>
     </div>
@@ -749,88 +811,124 @@ const generateServiceHistoryHTML = (serviceOrder) => {
   <hr>
   <div class="section">
     <div class="top-info">
-      <div class="block">
-        <div class="label">Bill To:</div>
-        <div class="small">
-          ${serviceOrder.customerId?.name || 'N/A'}<br>
-          ${serviceOrder.customerId?.contactNumber || ''}<br>
-          ${serviceOrder.customerId?.email || ''}<br>
-          ${serviceOrder.vehicleNumber || ''}
+      <div class="block" style="display:flex; gap:12px; align-items:flex-start;">
+        <div class="label" style="min-width:40px;">Bill to:</div>
+        <div class="small" style="flex:1;">
+          <div style="color:#111827;">${serviceOrder.customerId?.name || "N/A"}</div>
+          <div style="margin-top:2px; color:#374151;">${serviceOrder.customerId?.contactNumber || ""}<br>
+          ${serviceOrder.customerId?.email || ""}<br>
+          ${serviceOrder.vehicleNumber || ""}</div>
         </div>
       </div>
       <div class="invoice-meta">
-        <div class="status">
-          <b style="font-size:10px;">Invoice Date</b>
-          <div style="font-size:10px; margin-top:5px; font-weight:500; color:#666;">${formatDate(serviceOrder.createdAt)}</div>
+      <div class="status">
+          <b style="font-size:11px;">Invoice</b>
+          <div style="font-size:11px; margin-top:5px; font-weight:500; color:#666;">${serviceOrder.invoiceNumber || "N/A"}</div>
         </div>
         <div class="status">
-          <b style="font-size:10px;">Status</b>
-          <div style="font-size:10px; margin-top:5px; font-weight:500; color:#666;">${(serviceOrder.status ? serviceOrder.status.charAt(0).toUpperCase() + serviceOrder.status.slice(1) : "Completed")}</div>
+          <b style="font-size:11px;">Invoice Date</b>
+          <div style="font-size:11px; margin-top:5px; font-weight:500; color:#666;">${formatDate(serviceOrder.createdAt)}</div>
         </div>
         <div class="status">
-          <b style="font-size:10px;">Service Type</b>
-          <div style="font-size:10px; margin-top:5px; font-weight:500; color:#666;">${serviceOrder.serviceType || "General Service"}</div>
+          <b style="font-size:11px;">Status</b>
+          <div style="font-size:11px; margin-top:5px; font-weight:500; color:#666;">${serviceOrder.status ? serviceOrder.status.charAt(0).toUpperCase() + serviceOrder.status.slice(1) : "Completed"}</div>
         </div>
         <div class="status">
-          <b style="font-size:10px;">Payment Method</b>
-          <div style="font-size:10px; margin-top:5px; font-weight:500; color:#666;">${serviceOrder.paymentType ? (serviceOrder.paymentType === "bank-transfer" ? "Bank Transfer" : serviceOrder.paymentType.charAt(0).toUpperCase() + serviceOrder.paymentType.slice(1)) : "N/A"}</div>
+          <b style="font-size:11px;">Technician</b>
+          <div style="font-size:11px; margin-top:5px; font-weight:500; color:#666;">${serviceOrder.employeeId?.name || "N/A"}</div>
+        </div>
+        <div class="status">
+          <b style="font-size:11px;">Payment Method</b>
+          <div style="font-size:11px; margin-top:5px; font-weight:500; color:#666;">${serviceOrder.paymentType ? (serviceOrder.paymentType === "bank-transfer" ? "Bank Transfer" : serviceOrder.paymentType.charAt(0).toUpperCase() + serviceOrder.paymentType.slice(1)) : "N/A"}</div>
         </div>
       </div>
     </div>
 
-    <!-- PARTS TABLE (unchanged) -->
-    <table>
+    <!-- SERVICE ENTRIES TABLE -->
+    <table style="margin-top: 30px;">
       <thead>
         <tr>
-          <th>Description</th>
-          <th>Qty</th>
-          <th>Price</th>
-          <th>Amount</th>
+          <th style="font-weight:500; font-size:11px;">Service</th>
+          <th style="font-weight:500; font-size:11px;">Rate</th>
+          <th style="font-weight:500; font-size:11px;">Amount</th>
         </tr>
       </thead>
       <tbody>
-        ${(serviceOrder.parts || []).map(p => `
+        ${serviceEntriesHTML}
+      </tbody>
+    </table>
+
+    <!-- PARTS TABLE (unchanged) -->
+    <table style="margin-top: 30px;">
+      <thead>
+        <tr>
+          <th style="font-weight:500; font-size:11px;">Material & Parts</th>
+          <th style="font-weight:500; font-size:11px;">Quantity</th>
+          <th style="font-weight:500; font-size:11px;">Unit Price</th>
+          <th style="font-weight:500; font-size:11px;">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${(serviceOrder.parts || [])
+          .map(
+            (p) => `
           <tr>
-            <td>${p.name || 'Part'}</td>
-            <td>${p.quantity || 0}</td>
-            <td>${formatCurrency(p.price || 0)}</td>
-            <td>${formatCurrency((p.quantity || 0) * (p.price || 0))}</td>
+            <td style="font-weight:600; color:#111827; font-size:10px;">${p.name || "Part"}</td>
+            <td style="font-weight:600; color:#111827; font-size:10px;">${p.quantity || 0}</td>
+            <td style="font-weight:600; color:#111827; font-size:10px;">${formatCurrency(p.price || 0)}</td>
+            <td style="font-weight:600; color:#111827; font-size:10px;">${formatCurrency((p.quantity || 0) * (p.price || 0))}</td>
           </tr>
-        `).join("")}
-        ${(!serviceOrder.parts || serviceOrder.parts.length === 0) ? `
+        `,
+          )
+          .join("")}
+        ${
+          !serviceOrder.parts || serviceOrder.parts.length === 0
+            ? `
           <tr>
             <td colspan="4" style="text-align:center; padding:16px;">No parts recorded</td>
           </tr>
-        ` : ""}
+        `
+            : ""
+        }
       </tbody>
     </table>
 
     <!-- SUMMARY SECTION (service charge, materials, other charges, card fee, total) -->
     <div class="summary">
       <div class="summary-row">
-        <span class="summary-label">Service Charge (Labor)</span>
-        <span class="summary-label">${formatCurrency(serviceOrder.laborCost || 0)}</span>
+        <span class="summary-label">Service Charge</span>
+        <span class="summary-label">${formatCurrency(serviceEntries.reduce((sum, entry) => sum + (entry.laborCost || 0), 0))}</span>
       </div>
       <div class="summary-row">
         <span class="summary-label">Materials (Parts)</span>
-        <span class="summary-label">${formatCurrency((serviceOrder.parts || []).reduce((a, p) => a + (p.price * p.quantity), 0))}</span>
+        <span class="summary-label">${formatCurrency((serviceOrder.parts || []).reduce((a, p) => a + p.price * p.quantity, 0))}</span>
       </div>
 
       <!-- Other charges displayed line by line (e.g., Dent repair, Tyre replacement, etc) -->
-      ${(serviceOrder.otherCharges || []).map(charge => `
+      ${(serviceOrder.otherCharges || [])
+        .map(
+          (charge) => `
         <div class="summary-row">
           <span class="summary-label">${charge.chargeType || "Other charge"}</span>
           <span class="summary-label">${formatCurrency(charge.amount || 0)}</span>
         </div>
-      `).join("")}
+      `,
+        )
+        .join("")}
 
-      ${serviceOrder.paymentType === "card" ? `
+      ${
+        serviceOrder.paymentType === "card"
+          ? `
         <div class="summary-row">
           <span class="summary-label">Card Processing Fee (3%)</span>
           <span class="summary-label">${formatCurrency(calculateCardProcessingFee(serviceOrder))}</span>
         </div>
-      ` : ""}
-
+      `
+          : ""
+      }
+      <div style="border-bottom: 2px solid #eee;
+      font-weight: 600;
+      color: #666; margin-top: 10px; "></div>
       <div class="summary-row total">
         <span>Total Amount</span>
         <span>${formatCurrency(serviceOrder.totalAmount)}</span>
