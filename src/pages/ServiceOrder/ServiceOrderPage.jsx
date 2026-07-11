@@ -201,6 +201,7 @@ export function ServiceOrderPage() {
     serviceTypeId: "",
     serviceType: "",
     servicePrice: 0,
+    serviceRate: 0,
     laborCost: 0,
     description: "",
     ...overrides,
@@ -234,6 +235,7 @@ export function ServiceOrderPage() {
       servicePrice: 0,
       serviceDescription: "",
       laborCost: 0,
+      billDiscountPercent: 0,
       paymentType: "",
       otherCharges: [], // Array to store multiple charges
       parts: [], // Initialize with empty array
@@ -254,6 +256,7 @@ export function ServiceOrderPage() {
     servicePrice: 0,
     serviceDescription: "",
     laborCost: 4500,
+    billDiscountPercent: 0,
     paymentType: "",
     otherCharges: [],
     parts: [],
@@ -301,7 +304,15 @@ export function ServiceOrderPage() {
     return parts;
   };
 
-  const handleAddPart = (selectedPartId, quantity) => {
+  const getPartLineTotal = (part) => {
+    const price = parseFloat(part?.price) || 0;
+    const quantity = parseInt(part?.quantity, 10) || 0;
+    const discountPercent = parseFloat(part?.discountPercent) || 0;
+    const discountedAmount = price * quantity * (1 - Math.max(0, discountPercent) / 100);
+    return discountedAmount;
+  };
+
+  const handleAddPart = (selectedPartId, quantity, discountPercent) => {
     if (!selectedPartId || !currentRepair.vehicleNumber) {
       toast.warning("Please select a vehicle first");
       return;
@@ -314,7 +325,8 @@ export function ServiceOrderPage() {
     }
 
     const updatedRepairs = [...repairs];
-    const partQuantity = parseInt(quantity) || 1;
+    const partQuantity = parseInt(quantity, 10) || 1;
+    const parsedDiscount = Math.max(0, parseFloat(discountPercent) || 0);
 
     // Ensure parts array exists
     if (!updatedRepairs[currentRepairIndex].parts) {
@@ -334,11 +346,24 @@ export function ServiceOrderPage() {
         name: part.name,
         price: part.price || 0,
         quantity: partQuantity,
+        discountPercent: parsedDiscount,
       });
     }
 
     setRepairs(updatedRepairs);
     toast.success("Part added to repair");
+  };
+
+  const handleUpdatePartDiscount = (partId, discountPercent) => {
+    const updatedRepairs = [...repairs];
+    const parts = updatedRepairs[currentRepairIndex]?.parts || [];
+    const partIndex = parts.findIndex((part) => part._id === partId);
+
+    if (partIndex >= 0) {
+      const parsedDiscount = Math.max(0, parseFloat(discountPercent) || 0);
+      updatedRepairs[currentRepairIndex].parts[partIndex].discountPercent = parsedDiscount;
+      setRepairs(updatedRepairs);
+    }
   };
 
   const handleRemovePart = (partId) => {
@@ -402,14 +427,16 @@ export function ServiceOrderPage() {
     const selectedServiceType = serviceTypes.find((st) => st._id === serviceTypeId);
     const updatedRepairs = [...repairs];
     const currentRepairData = updatedRepairs[currentRepairIndex] || {};
+    const price = selectedServiceType ? parseFloat(selectedServiceType.price) || 0 : 0;
     const entries = (currentRepairData.serviceTypeEntries || []).map((entry) => {
       if (entry.id !== entryId) return entry;
       return {
         ...entry,
         serviceTypeId: serviceTypeId,
         serviceType: selectedServiceType?.name || "General Service",
-        servicePrice: selectedServiceType ? selectedServiceType.price : 0,
-        laborCost: selectedServiceType ? selectedServiceType.price : 0,
+        servicePrice: price,
+        serviceRate: price,
+        laborCost: price,
       };
     });
 
@@ -447,6 +474,28 @@ export function ServiceOrderPage() {
       return {
         ...entry,
         laborCost: !isNaN(parsedValue) && parsedValue >= 0 ? parsedValue : 0,
+        serviceAmount: !isNaN(parsedValue) && parsedValue >= 0 ? parsedValue : 0,
+      };
+    });
+
+    updatedRepairs[currentRepairIndex] = buildRepairWithServiceTypeEntries({
+      ...currentRepairData,
+      serviceTypeEntries: entries.length > 0 ? entries : [createServiceTypeEntry()],
+    });
+    setRepairs(updatedRepairs);
+  };
+
+  const handleServiceTypeEntryRateChange = (entryId, value) => {
+    const updatedRepairs = [...repairs];
+    const currentRepairData = updatedRepairs[currentRepairIndex] || {};
+    const entries = (currentRepairData.serviceTypeEntries || []).map((entry) => {
+      if (entry.id !== entryId) return entry;
+      const parsedValue = parseFloat(value);
+      return {
+        ...entry,
+        serviceRate: !isNaN(parsedValue) && parsedValue >= 0 ? parsedValue : 0,
+        servicePrice: !isNaN(parsedValue) && parsedValue >= 0 ? parsedValue : 0,
+        laborCost: !isNaN(parsedValue) && parsedValue >= 0 ? parsedValue : 0,
       };
     });
 
@@ -481,6 +530,7 @@ export function ServiceOrderPage() {
           serviceTypeId: result._id,
           serviceType: result.name,
           servicePrice: result.price || 0,
+          serviceRate: result.price || 0,
           laborCost: result.price || 0,
         };
       });
@@ -517,6 +567,7 @@ export function ServiceOrderPage() {
       servicePrice: 0,
       serviceDescription: "",
       laborCost: 0,
+      billDiscountPercent: 0,
       paymentType: "",
       otherCharges: [], // Array to store multiple charges
       parts: [], // Initialize with empty array
@@ -546,18 +597,28 @@ export function ServiceOrderPage() {
 
     const parts = repair.parts || [];
     const partsTotal = parts.reduce((sum, part) => {
-      const price = part.price || 0;
-      const quantity = part.quantity || 0;
-      return sum + price * quantity;
+      return sum + getPartLineTotal(part);
     }, 0);
 
     const laborCost = parseFloat(repair.laborCost) || 0;
     return partsTotal + laborCost;
   };
 
+  const getBillDiscountAmount = (repair) => {
+    if (!repair) return 0;
+    const subtotal = getRepairSubtotal(repair);
+    const discountPercent = parseFloat(repair.billDiscountPercent) || 0;
+    return Math.max(0, subtotal * (Math.min(100, Math.max(0, discountPercent)) / 100));
+  };
+
+  const getSubtotalAfterDiscount = (repair) => {
+    if (!repair) return 0;
+    return getRepairSubtotal(repair) - getBillDiscountAmount(repair);
+  };
+
   const calculateCardProcessingFee = (repair) => {
     if (!repair || repair.paymentType !== "card") return 0;
-    const subtotal = getRepairSubtotal(repair);
+    const subtotal = getSubtotalAfterDiscount(repair);
     return subtotal * 0.03;
   };
 
@@ -624,7 +685,7 @@ export function ServiceOrderPage() {
   const calculateRepairTotal = (repair) => {
     if (!repair) return 0;
     
-    const subtotal = getRepairSubtotal(repair);
+    const subtotal = getSubtotalAfterDiscount(repair);
     const fee = calculateCardProcessingFee(repair);
     const otherChargeAmount = getOtherChargeAmount(repair);
     return subtotal + fee + otherChargeAmount;
@@ -730,7 +791,9 @@ export function ServiceOrderPage() {
         name: part.name,
         price: part.price,
         quantity: part.quantity,
+        discountPercent: part.discountPercent || 0,
       })),
+      billDiscountPercent: parseFloat(currentRepair.billDiscountPercent) || 0,
       status: "completed",
       totalAmount: calculateRepairTotal(currentRepair),
       serviceTypeId: serviceTypeEntries[0]?.serviceTypeId || currentRepair.serviceTypeId,
@@ -990,11 +1053,11 @@ export function ServiceOrderPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Vehicle Selection */}
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                  <label className="mb-1.5 block text-xs font-medium text-gray-700">
                     Select Vehicle
                   </label>
                   <select
-                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     value={currentRepair.vehicleNumber || ""}
                     onChange={(e) =>
                       handleUpdateRepairField("vehicleNumber", e.target.value)
@@ -1025,11 +1088,11 @@ export function ServiceOrderPage() {
 
                 {/* Employee Assignment */}
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                  <label className="mb-1.5 block text-xs font-medium text-gray-700">
                     Assign Employee
                   </label>
                   <select
-                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     value={currentRepair.employeeId || ""}
                     onChange={(e) =>
                       handleUpdateRepairField("employeeId", e.target.value)
@@ -1053,13 +1116,13 @@ export function ServiceOrderPage() {
                 {/* Service Type Selection */}
                 <div className="sm:col-span-2">
                   <div className="flex items-center justify-between mb-2">
-                    <label className="block text-sm font-medium text-gray-700">
+                    <label className="block text-xs font-medium text-gray-700">
                       Select Service Type
                     </label>
                     <button
                       type="button"
                       onClick={handleAddServiceTypeEntry}
-                      className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                      className="text-xs font-medium text-blue-600 hover:text-blue-700"
                     >
                       + Add Service Type
                     </button>
@@ -1069,21 +1132,21 @@ export function ServiceOrderPage() {
                     {(currentRepair.serviceTypeEntries || []).map((entry, entryIndex) => (
                       <div key={entry.id} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
                         <div className="flex items-center justify-between gap-2 mb-2">
-                          <p className="text-sm font-medium text-gray-700">
+                          <p className="text-xs font-medium text-gray-700">
                             Service Type #{entryIndex + 1}
                           </p>
                           {(currentRepair.serviceTypeEntries || []).length > 1 && (
                             <button
                               type="button"
                               onClick={() => handleRemoveServiceTypeEntry(entry.id)}
-                              className="text-sm text-red-600 hover:text-red-700"
+                              className="text-xs text-red-600 hover:text-red-700"
                             >
                               Remove
                             </button>
                           )}
                         </div>
                         <select
-                          className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                           value={showNewServiceTypeForm && activeServiceTypeEntryId === entry.id ? "__other__" : (entry.serviceTypeId || "")}
                           onChange={(e) => handleServiceTypeEntryChange(entry.id, e.target.value)}
                         >
@@ -1104,29 +1167,42 @@ export function ServiceOrderPage() {
                         <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
                           <div>
                             <label className="mb-1 block text-xs font-medium text-gray-600">
-                              Service Charge (Rs.)
+                              Rate (Rs.)
                             </label>
                             <input
                               type="number"
                               min="0"
                               step="0.01"
-                              value={entry.laborCost ?? 0}
-                              onChange={(e) => handleServiceTypeEntryChargeChange(entry.id, e.target.value)}
-                              className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              value={parseFloat(entry.serviceRate ?? entry.laborCost ?? 0).toFixed(2)}
+                              onChange={(e) => handleServiceTypeEntryRateChange(entry.id, e.target.value)}
+                              className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                             />
                           </div>
                           <div>
                             <label className="mb-1 block text-xs font-medium text-gray-600">
-                              Details
+                              Amount (Rs.)
                             </label>
-                            <textarea
-                              rows={2}
-                              value={entry.description || ""}
-                              onChange={(e) => handleServiceTypeEntryDescriptionChange(entry.id, e.target.value)}
-                              placeholder="Describe what was done, such as 'Shock mount replaced - back left side'"
-                              className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={parseFloat(entry.laborCost ?? entry.serviceAmount ?? 0).toFixed(2)}
+                              onChange={(e) => handleServiceTypeEntryChargeChange(entry.id, e.target.value)}
+                              className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                             />
                           </div>
+                        </div>
+                        <div className="mt-2">
+                          <label className="mb-1 block text-xs font-medium text-gray-600">
+                            Details
+                          </label>
+                          <textarea
+                            rows={2}
+                            value={entry.description || ""}
+                            onChange={(e) => handleServiceTypeEntryDescriptionChange(entry.id, e.target.value)}
+                            placeholder="Describe what was done, such as 'Shock mount replaced - back left side'"
+                            className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          />
                         </div>
                       </div>
                     ))}
@@ -1140,7 +1216,7 @@ export function ServiceOrderPage() {
                         placeholder="Service type name"
                         value={newServiceTypeName}
                         onChange={(e) => setNewServiceTypeName(e.target.value)}
-                        className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                       <input
                         type="number"
@@ -1149,18 +1225,18 @@ export function ServiceOrderPage() {
                         step="0.01"
                         value={newServiceTypePrice}
                         onChange={(e) => setNewServiceTypePrice(e.target.value)}
-                        className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                       <div className="flex gap-2">
                         <button
                           onClick={handleSaveNewServiceType}
                           disabled={isSavingServiceType}
-                          className="flex-1 px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 rounded-lg transition-colors"
+                          className="flex-1 px-3 py-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 rounded-lg transition-colors"
                         >
                           {isSavingServiceType ? "Saving..." : "Save & Select"}
                         </button>
                         <button
-                          onClick={() => {
+                          onClick={() => {  
                             setShowNewServiceTypeForm(false);
                             setActiveServiceTypeEntryId(null);
                             setNewServiceTypeName("");
@@ -1177,11 +1253,11 @@ export function ServiceOrderPage() {
 
                 {/* Payment Type Selection */}
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                  <label className="mb-1.5 block text-xs font-medium text-gray-700">
                     Payment Type
                   </label>
                   <select
-                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     value={currentRepair.paymentType || ""}
                     onChange={(e) =>
                       handleUpdateRepairField("paymentType", e.target.value)
@@ -1196,11 +1272,11 @@ export function ServiceOrderPage() {
 
                 {/* Other Charges Selection */}
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                  <label className="mb-1.5 block text-xs font-medium text-gray-700">
                     Other Charges (Optional)
                   </label>
                   <select
-                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     onChange={(e) => {
                       if (e.target.value) {
                         handleAddOtherCharge(e.target.value);
@@ -1237,7 +1313,7 @@ export function ServiceOrderPage() {
                         className="flex items-center justify-between p-3 bg-purple-50 border border-purple-200 rounded-lg"
                       >
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-purple-900">{charge.chargeType}</p>
+                          <p className="text-xs font-medium text-purple-900">{charge.chargeType}</p>
                         </div>
                         <div className="flex items-center gap-2">
                           <input
@@ -1248,7 +1324,7 @@ export function ServiceOrderPage() {
                             onChange={(e) =>
                               handleUpdateOtherChargeAmount(charge._id, e.target.value)
                             }
-                            className="w-24 px-2 py-1 border border-purple-300 rounded text-sm text-right"
+                            className="w-24 px-2 py-1 border border-purple-300 rounded text-xs text-right"
                           />
                           <button
                             onClick={() => handleRemoveOtherCharge(charge._id)}
@@ -1268,7 +1344,7 @@ export function ServiceOrderPage() {
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                   <div className="flex items-start gap-2">
                     <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                    <div className="text-sm">
+                    <div className="text-xs">
                       <p className="font-medium text-blue-900">
                         Vehicle Details
                       </p>
@@ -1287,7 +1363,7 @@ export function ServiceOrderPage() {
                 <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                   <div className="flex items-start gap-2">
                     <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                    <div className="text-sm">
+                    <div className="text-xs">
                       <p className="font-medium text-green-900">
                         Assigned Employee
                       </p>
@@ -1308,12 +1384,12 @@ export function ServiceOrderPage() {
               {/* Add Parts Form */}
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
                 <div className="flex-1">
-                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                  <label className="mb-1.5 block text-xs font-medium text-gray-700">
                     Add Part
                   </label>
                   <select
                     id="partSelect"
-                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     disabled={isLoadingProducts}
                   >
                     <option value="">-- Select Part --</option>
@@ -1325,7 +1401,7 @@ export function ServiceOrderPage() {
                   </select>
                 </div>
                 <div className="w-24">
-                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                  <label className="mb-1.5 block text-xs font-medium text-gray-700">
                     Qty
                   </label>
                   <input
@@ -1333,6 +1409,20 @@ export function ServiceOrderPage() {
                     id="partQty"
                     min="1"
                     defaultValue="1"
+                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="w-14">
+                  <label className="mb-1.5 block text-xs font-medium text-gray-700">
+                    Disc %
+                  </label>
+                  <input
+                    type="number"
+                    id="partDiscount"
+                    min="0"
+                    max="100"
+                    step="1"
+                    defaultValue="0"
                     className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
@@ -1340,9 +1430,11 @@ export function ServiceOrderPage() {
                   onClick={() => {
                     const partId = document.getElementById("partSelect").value;
                     const qty = document.getElementById("partQty").value;
-                    handleAddPart(partId, qty);
+                    const discount = document.getElementById("partDiscount").value;
+                    handleAddPart(partId, qty, discount);
                     document.getElementById("partSelect").value = "";
                     document.getElementById("partQty").value = "1";
+                    document.getElementById("partDiscount").value = "0";
                   }}
                   disabled={!currentRepair.vehicleNumber || isLoadingProducts}
                 >
@@ -1366,6 +1458,9 @@ export function ServiceOrderPage() {
                           Qty
                         </th>
                         <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                          Disc %
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
                           Total
                         </th>
                         <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
@@ -1376,20 +1471,27 @@ export function ServiceOrderPage() {
                     <tbody className="bg-white divide-y divide-gray-200">
                       {(currentRepair.parts || []).map((part, index) => (
                         <tr key={part._id || index}>
-                          <td className="px-4 py-3 text-sm text-gray-900">
+                          <td className="px-4 py-3 text-xs text-gray-900">
                             {part.name}
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                          <td className="px-4 py-3 text-xs text-gray-900 text-right">
                             Rs. {(part.price || 0).toFixed(2)}
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-900 text-right">
+                          <td className="px-4 py-3 text-xs text-gray-900 text-right">
                             {part.quantity || 0}
                           </td>
-                          <td className="px-4 py-3 text-sm font-medium text-gray-900 text-right">
-                            Rs.{" "}
-                            {((part.price || 0) * (part.quantity || 0)).toFixed(
-                              2,
-                            )}
+                          <td className="px-3 py-3 text-xs text-gray-900 text-right">
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={parseFloat(part.discountPercent) || 0}
+                              onChange={(e) => handleUpdatePartDiscount(part._id, e.target.value)}
+                              className="w-14 rounded border border-gray-300 px-2 py-1 text-center text-xs"
+                            />
+                          </td>
+                          <td className="px-4 py-3 text-xs font-medium text-gray-900 text-right">
+                            Rs. {getPartLineTotal(part).toFixed(2)}
                           </td>
                           <td className="px-4 py-3 text-right">
                             <button
@@ -1437,7 +1539,7 @@ export function ServiceOrderPage() {
           {/* Current Repair Summary */}
           <Card title={`Repair #${currentRepairIndex + 1} Summary`}>
             <div className="space-y-4">
-              <div className="text-sm space-y-2">
+              <div className="text-xs space-y-2">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Vehicle:</span>
                   <span className="font-medium">
@@ -1479,10 +1581,11 @@ export function ServiceOrderPage() {
 
               <div className="border-t border-gray-100 pt-4 space-y-3">
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                  <label className="mb-1.5 block text-xs font-medium text-gray-700">
                     Total Service Charge (Rs.)
                   </label>
                   <Input
+                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     type="number"
                     min="0"
                     step="0.01"
@@ -1494,36 +1597,52 @@ export function ServiceOrderPage() {
                     Auto-calculated from each added service type entry.
                   </p>
                 </div>
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-gray-700">
+                    Bill Discount (%)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={parseFloat(currentRepair.billDiscountPercent || 0)}
+                    onChange={(e) => handleUpdateRepairField("billDiscountPercent", e.target.value)}
+                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
               </div>
 
               <div className="border-t border-gray-100 pt-4 space-y-2">
-                <div className="flex justify-between text-sm text-gray-600">
+                <div className="flex justify-between text-xs text-gray-600">
                   <span>Parts Total:</span>
                   <span>
-                    Rs.{" "}
-                    {(currentRepair.parts || [])
-                      .reduce(
-                        (sum, p) => sum + (p.price || 0) * (p.quantity || 0),
-                        0,
-                      )
-                      .toFixed(2)}
+                    Rs. {getRepairSubtotal({ ...currentRepair, laborCost: 0 }).toFixed(2)}
                   </span>
                 </div>
-                <div className="flex justify-between text-sm text-gray-600">
+                <div className="flex justify-between text-xs text-gray-600">
                   <span>Labor:</span>
                   <span>
                     Rs. {(parseFloat(currentRepair.laborCost) || 0).toFixed(2)}
                   </span>
                 </div>
+                {parseFloat(currentRepair.billDiscountPercent || 0) > 0 && (
+                  <div className="flex justify-between text-xs text-red-600 bg-red-50 px-3 py-2 rounded">
+                    <span>Bill Discount:</span>
+                    <span className="font-medium">
+                      - Rs. {getBillDiscountAmount(currentRepair).toFixed(2)}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between text-base font-semibold text-gray-900 pt-2 border-t border-gray-100">
                   <span>Subtotal:</span>
                   <span>
-                    Rs. {getRepairSubtotal(currentRepair).toFixed(2)}
+                    Rs. {getSubtotalAfterDiscount(currentRepair).toFixed(2)}
                   </span>
                 </div>
                 {currentRepair.paymentType === "card" && (
                   <>
-                    <div className="flex justify-between text-sm text-orange-600 bg-orange-50 px-3 py-2 rounded">
+                    <div className="flex justify-between text-xs text-orange-600 bg-orange-50 px-3 py-2 rounded">
                       <span>Card Processing Fee (3%):</span>
                       <span className="font-medium">
                         Rs. {calculateCardProcessingFee(currentRepair).toFixed(2)}

@@ -48,8 +48,19 @@ export function InvoiceGenerationPage() {
       : null
   }
 
+  const getPartDiscountPercent = (part) => {
+    return Math.max(0, Math.min(100, parseFloat(part?.discountPercent) || 0))
+  }
+
+  const getPartLineTotal = (part) => {
+    const price = parseFloat(part?.price) || 0
+    const quantity = parseInt(part?.quantity, 10) || 0
+    const discountPercent = getPartDiscountPercent(part)
+    return price * quantity * (1 - discountPercent / 100)
+  }
+
   const calculateRepairTotal = (repair) => {
-    const partsTotal = repair.parts.reduce((sum, part) => sum + part.price * part.quantity, 0)
+    const partsTotal = (repair.parts || []).reduce((sum, part) => sum + getPartLineTotal(part), 0)
     return partsTotal + (parseFloat(repair.laborCost) || 0)
   }
 
@@ -229,6 +240,9 @@ export function InvoiceGenerationPage() {
                               Qty
                             </th>
                             <th className="border border-gray-300 px-3 py-2 text-right font-semibold">
+                              Discount %
+                            </th>
+                            <th className="border border-gray-300 px-3 py-2 text-right font-semibold">
                               Total
                             </th>
                           </tr>
@@ -243,8 +257,11 @@ export function InvoiceGenerationPage() {
                               <td className="border border-gray-300 px-3 py-2 text-right">
                                 {part.quantity}
                               </td>
+                              <td className="border border-gray-300 px-3 py-2 text-right">
+                                {getPartDiscountPercent(part)}%
+                              </td>
                               <td className="border border-gray-300 px-3 py-2 text-right font-semibold">
-                                Rs. {(part.price * part.quantity).toFixed(2)}
+                                Rs. {part.price.toFixed(2) * part.quantity * (1 - getPartDiscountPercent(part) / 100).toFixed(2)}
                               </td>
                             </tr>
                           ))}
@@ -260,9 +277,7 @@ export function InvoiceGenerationPage() {
                         <span className="font-semibold">Parts Subtotal:</span>
                         <span>
                           Rs.{' '}
-                          {repair.parts
-                            .reduce((sum, p) => sum + p.price * p.quantity, 0)
-                            .toFixed(2)}
+                          {(repair.parts || []).reduce((sum, p) => sum + getPartLineTotal(p), 0).toFixed(2)}
                         </span>
                       </div>
                       <div className="flex justify-between border-b border-gray-300 py-2 mb-2">

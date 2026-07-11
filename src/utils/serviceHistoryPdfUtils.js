@@ -60,6 +60,7 @@ const getRepairSubtotal = (repair) => {
       return serviceOrder.serviceTypeEntries.map((entry) => ({
         serviceType: entry.serviceType || "Service",
         description: entry.description || "",
+        servicePrice: parseFloat(entry.servicePrice) || 0,
         laborCost: parseFloat(entry.laborCost || entry.servicePrice || 0) || 0,
       }));
     }
@@ -77,341 +78,6 @@ const getRepairSubtotal = (repair) => {
     return [];
   };
 
-/**
- * Generate professional HTML template for service history record with logo and blue theme
- */
-// const generateServiceHistoryHTML = (serviceOrder) => {
-//   const partsHTML = serviceOrder.parts?.length
-//     ? serviceOrder.parts
-//         .map(
-//           (part) => `
-//         <tr>
-//           <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-transform: lowercase;">${
-//             part.name || "N/A"
-//           }</td>
-//           <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: center;">${
-//             part.quantity || 0
-//           }</td>
-//           <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: right;">${formatCurrency(
-//             part.price || 0,
-//           )}</td>
-//         </tr>`,
-//         )
-//         .join("")
-//     : `
-//         <tr>
-//           <td colspan="3" style="padding: 8px; text-align: center; color: #718096;">No parts used</td>
-//          </tr>`;
-
-//   const statusText = serviceOrder.status
-//     ? serviceOrder.status.charAt(0).toUpperCase() + serviceOrder.status.slice(1)
-//     : "Completed";
-
-//   return `
-// <!DOCTYPE html>
-// <html>
-//    <head>
-//       <meta charset="UTF-8">
-//       <style>
-//          *{
-//          margin:0;
-//          padding:0;
-//          box-sizing:border-box;
-//          }
-//          body{
-//          /* Industry‑appropriate font stack: Inter (modern), Roboto, Segoe UI, fallback */
-//          font-family: 'Inter', 'Roboto', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-//          background:#efefef;
-//          font-weight: 400;
-//          line-height: 1.5;
-//          }
-//          .invoice{
-//          width:210mm;
-//          margin:auto;
-//          background:white;
-//          color:#222;
-//          }
-//          .section{
-//          padding:24px 36px;
-//          }
-//          hr{
-//          border:none;
-//          border-top:1px solid #ddd;
-//          }
-//          .header{
-//          display:flex;
-//          justify-content:space-between;
-//          align-items:flex-start;
-//          }
-//          .logo{
-//          width:300px;
-//          margin-left:-50px;
-//          }
-//          .company{
-//          text-align:right;
-//          line-height:1.8;
-//          font-size:12px;
-//          }
-//          .company-info{
-//          font-size:12px;
-//          margin-bottom:8px;
-//          font-weight:500;
-//          }
-//          .top-info{
-//          display:flex;
-//          justify-content:space-between;
-//          margin-top:10px;
-//          }
-//          .block{
-//          width:48%;
-//          }
-//          .label{
-//          font-weight:600;
-//          margin-bottom:5px;
-//          font-size:13px;
-//          }
-//          .small{
-//          color:#666;
-//          line-height:1.7;
-//          font-size:10px;
-//          font-weight:500;
-//          }
-//          .invoice-meta{
-//          text-align:right;
-//          }
-//          .invoice-meta div{
-//          margin-bottom:1px;
-//          }
-//         .status{
-//           text-align:right;
-//           display:flex;
-//           justify-content:space-between;
-//           align-items:center;
-//           gap:30px;
-//         }
-//           .status b{
-//             font-weight:600;
-//             text-align:right;
-//           }
-//          table{
-//          width:100%;
-//          border-collapse:collapse;
-//          margin-top:20px;
-//          }
-//          th{
-//          text-align:left;
-//          padding:14px;
-//          border-bottom:2px solid #ddd;
-//          font-size:13px;
-//          font-weight:600;
-//          }
-//          td{
-//          padding:18px 14px;
-//          border-bottom:1px solid #eee;
-//          font-size:11px;
-//          font-weight:500;
-//          color:#666;
-//          }
-//          td:last-child,
-//          th:last-child{
-//          text-align:right;
-//          }
-//          .summary{
-//          width:320px;
-//          margin-left:auto;
-//          margin-top:30px;
-//          }
-//          .summary-label{
-//          font-size:12px;
-//          font-weight:500;
-//          color:#666;
-//         }
-//          .summary-row{
-//          display:flex;
-//          justify-content:space-between;
-//          padding:5px 0;
-//          }
-//          .total{
-//          font-size:13px;
-//          font-weight:700;
-//          }
-//          .note{
-//          margin-top:40px;
-//          line-height:1.8;
-//          font-size:12px;
-//          }
-//          .footer{
-//          margin-top:50px;
-//          padding-top:20px;
-//          border-top:1px solid #ddd;
-//          display:flex;
-//          justify-content:space-between;
-//          align-items:center;
-//          }
-//          .bank{
-//          font-size:12px;
-//          color:#555;
-//          }
-//          .qr{
-//          width:90px;
-//          }
-//       </style>
-//    </head>
-//    <body>
-//       <div class="invoice">
-//          <div class="section">
-//             <div class="header">
-//                <div>
-//                   <img src="${InvoiceLogo}" class="logo"/>
-//                </div>
-//                <div class="company">
-//                   <div class="company-info">
-//                      304A Abhaya Street<br>
-//                      Nagoda, Kalutara<br>
-//                      +94 71 427 4163<br>
-//                      chautomob@gmail.com
-//                   </div>
-//                </div>
-//             </div>
-//          </div>
-//          <hr>
-//          <div class="section">
-//             <div class="top-info">
-//                <div class="block">
-//                   <div class="label">
-//                      Bill To:
-//                   </div>
-//                   <div class="small">
-//                      ${serviceOrder.customerId?.name}<br>
-//                      ${serviceOrder.customerId?.contactNumber}<br>
-//                      ${serviceOrder.customerId?.email}<br>
-//                      ${serviceOrder.vehicleNumber}
-//                   </div>
-//                </div>
-//                <div class="invoice-meta">
-//                   <div class="status">
-//                      <b style="font-size:10px;">Invoice Date</b>
-//                      <div style="font-size:10px; margin-top:5px; font-weight:500; color:#666;">${formatDate(serviceOrder.createdAt)}</div>
-//                   </div>
-//                   <div class="status">
-//                      <b style="font-size:10px;">Status</b>
-//                      <div style="font-size:10px; margin-top:5px; font-weight:500; color:#666;">${statusText}</div>
-//                   </div>
-//                   <div class="status">
-//                      <b style="font-size:10px;">Service Type</b>
-//                      <div style="font-size:10px; margin-top:5px; font-weight:500; color:#666;">${serviceOrder.serviceType || "General Service"}</div>
-//                   </div>
-//                     <div class="status">
-//                      <b style="font-size:10px;">Payment Method</b>
-//                      <div style="font-size:10px; margin-top:5px; font-weight:500; color:#666;">${serviceOrder.paymentType ? serviceOrder.paymentType === "bank-transfer" ? "Bank Transfer" : serviceOrder.paymentType.charAt(0).toUpperCase() + serviceOrder.paymentType.slice(1) : "N/A"}</div>
-//                   </div>
-//                </div>
-//             </div>
-//              <!-- Other Charges Table (if applicable) -->
-//              ${serviceOrder.otherCharges && serviceOrder.otherCharges.length > 0 ? `
-//              <div class="section-title">OTHER CHARGES</div>
-//              <table>
-//                 <thead>
-//                    <tr>
-//                       <th style="width: 70%;">Charge Type</th>
-//                       <th style="width: 30%;" class="text-right">Amount</th>
-//                    </tr>
-//                 </thead>
-//                 <tbody>
-//                    ${serviceOrder.otherCharges.map((charge) => `
-//                    <tr>
-//                        <td>${charge.chargeType || "Other Charge"}</td>
-//                        <td class="text-right">${formatCurrency(charge.amount || 0)}</td>
-//                    </tr>
-//                    `).join("")}
-//                 </tbody>
-//              </table>
-//              ` : ""}
-//             <table>
-//                <thead>
-//                   <tr>
-//                      <th>Description</th>
-//                      <th>Qty</th>
-//                      <th>Price</th>
-//                      <th>Amount</th>
-//                   </tr>
-//                </thead>
-//                <tbody>
-//                   ${serviceOrder.parts?.map(p=>`
-//                   <tr>
-//                       <td>
-//                         ${p.name}
-//                       </td>
-//                       <td>
-//                         ${p.quantity}
-//                       </td>
-//                       <td>
-//                         ${formatCurrency(p.price)}
-//                       </td>
-//                       <td>
-//                         ${formatCurrency(
-//                         (p.quantity||0)*(p.price||0)
-//                         )}
-//                       </td>
-//                    </tr>
-//                   `).join("")}
-//                </tbody>
-//             </table>
-//             <div class="summary">
-//                <div class="summary-row">
-//                   <span class="summary-label">Service Charge</span>
-//                   <span class="summary-label">${formatCurrency(serviceOrder.laborCost||0)}</span>
-//                </div>
-//                <div class="summary-row">
-//                   <span class="summary-label">Materials Charge</span>
-//                   <span class="summary-label">${formatCurrency(
-//                   (serviceOrder.parts||[])
-//                   .reduce(
-//                   (a,p)=>
-//                   a+(p.price*p.quantity),
-//                   0
-//                   )
-//                   )}</span>
-//                </div>
-//                ${serviceOrder.paymentType === "card" ? `
-//                <div class="summary-row">
-//                   <span class="summary-label">Card Processing Fee (3%)</span>
-//                   <span class="summary-label">${formatCurrency(calculateCardProcessingFee(serviceOrder))}</span>
-//                </div>
-//                ` : ""}
-//                ${serviceOrder.otherChargeAmount && serviceOrder.otherChargeAmount > 0 ? `
-//                <div class="summary-row">
-//                   <span class="summary-label">Other Charges</span>
-//                   <span class="summary-label">${formatCurrency(serviceOrder.otherChargeAmount || 0)}</span>
-//                </div>
-//                ` : ""}
-//                <div class="summary-row total">
-//                   <span>Total Amount</span>
-//                   <span>
-//                   ${formatCurrency(
-//                   serviceOrder.totalAmount
-//                   )}
-//                   </span>
-//                </div>
-//             </div>
-//             <div class="note">
-//                <b style="font-size:12px; font-weight: 600;">Service Report</b>
-//                <br>
-//                <b style="font-size:11px; color:#666; font-weight: 500;">${serviceOrder.serviceDescription || "Vehicle condition good"}</b>
-//             </div>
-//             <div class="footer">
-//                <div class="bank">
-//                   CH Automobile Service Center
-//                   <br>
-//                   Bank Transfer Available
-//                </div>
-//             </div>
-//          </div>
-//       </div>
-//    </body>
-// </html>
-// `;
-// };
 const generateServiceHistoryHTML = (serviceOrder) => {
   const serviceEntries = getServiceTypeEntries(serviceOrder);
   const serviceEntriesHTML = serviceEntries.length
@@ -423,8 +89,8 @@ const generateServiceHistoryHTML = (serviceOrder) => {
             <div style="font-weight:600; color:#111827; font-size:10px;">${entry.serviceType || "Service"}</div>
             ${entry.description ? `<div style="font-size:10px; color:#64748b; margin-top:4px;">${entry.description}</div>` : ""}
           </td>
-          <td style="font-size:10px;">${formatCurrency(entry.laborCost || 0)}</td>
-          <td style="font-size:10px;">${formatCurrency(entry.laborCost || 0)}</td>
+          <td style="font-size:10px; color:#111827">${formatCurrency(entry.servicePrice || 0)}</td>
+          <td style="font-size:10px; color:#111827">${formatCurrency(entry.laborCost || 0)}</td>
         </tr>`,
         )
         .join("")
@@ -444,6 +110,9 @@ const generateServiceHistoryHTML = (serviceOrder) => {
           <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: center;">${
             part.quantity || 0
           }</td>
+          <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: right;">${formatCurrency(
+            part.discountPercent || 0,
+          )}</td>
           <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: right;">${formatCurrency(
             part.price || 0,
           )}</td>
@@ -508,7 +177,7 @@ const generateServiceHistoryHTML = (serviceOrder) => {
     }
 
     .logo {
-      width: 350px;
+      width: 400px;
       margin-left: -50px;
     }
 
@@ -801,9 +470,8 @@ const generateServiceHistoryHTML = (serviceOrder) => {
           <strong style="color:#111827;">CH Automobile.</strong>
           304A Abhaya Street
           Nagoda, Kalutara<br>
-          <strong style="color:#111827;">Co. Reg. No. </strong>: 4229<br>
           <strong style="color:#111827;">Email: </strong>chautomob@gmail.com <strong style="color:#111827;">Phone: </strong> +94 71 427 4163<br>
-          <strong style="color:#111827;">Website: </strong>www.chautomobile.lk
+          <strong style="color:#111827;">Website: </strong>www.chautomobile.lk <strong style="color:#111827;">Co. Reg. No. </strong> B.B 4229
         </div>
       </div>
     </div>
@@ -865,6 +533,7 @@ const generateServiceHistoryHTML = (serviceOrder) => {
           <th style="font-weight:500; font-size:11px;">Material & Parts</th>
           <th style="font-weight:500; font-size:11px;">Quantity</th>
           <th style="font-weight:500; font-size:11px;">Unit Price</th>
+          <th style="font-weight:500; font-size:11px;">Discount %</th>
           <th style="font-weight:500; font-size:11px;">Amount</th>
         </tr>
       </thead>
@@ -876,7 +545,8 @@ const generateServiceHistoryHTML = (serviceOrder) => {
             <td style="font-weight:600; color:#111827; font-size:10px;">${p.name || "Part"}</td>
             <td style="font-weight:600; color:#111827; font-size:10px;">${p.quantity || 0}</td>
             <td style="font-weight:600; color:#111827; font-size:10px;">${formatCurrency(p.price || 0)}</td>
-            <td style="font-weight:600; color:#111827; font-size:10px;">${formatCurrency((p.quantity || 0) * (p.price || 0))}</td>
+            <td style="font-weight:600; color:#111827; font-size:10px; text-align: center;">${p.discountPercent || 0}%</td>
+            <td style="font-weight:600; color:#111827; font-size:10px;">${formatCurrency((p.quantity || 0) * (p.price || 0) * (1 - (p.discountPercent || 0) / 100))}</td>
           </tr>
         `,
           )
@@ -901,7 +571,7 @@ const generateServiceHistoryHTML = (serviceOrder) => {
       </div>
       <div class="summary-row">
         <span class="summary-label">Materials (Parts)</span>
-        <span class="summary-label">${formatCurrency((serviceOrder.parts || []).reduce((a, p) => a + p.price * p.quantity, 0))}</span>
+        <span class="summary-label">${formatCurrency((serviceOrder.parts || []).reduce((a, p) => a + p.price * p.quantity * (1 - (p.discountPercent || 0) / 100), 0))}</span>
       </div>
 
       <!-- Other charges displayed line by line (e.g., Dent repair, Tyre replacement, etc) -->
@@ -926,6 +596,10 @@ const generateServiceHistoryHTML = (serviceOrder) => {
       `
           : ""
       }
+      <div class="summary-row">
+        <span class="summary-label">Total Discount</span>
+        <span class="summary-label">${serviceOrder.billDiscountPercent || 0}%</span>
+      </div>
       <div style="border-bottom: 2px solid #eee;
       font-weight: 600;
       color: #666; margin-top: 10px; "></div>

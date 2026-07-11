@@ -31,7 +31,7 @@ export function Card({
       {(title || description) && (
         <div className="px-6 py-5 border-b border-gray-100">
           {title && (
-            <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+            <h3 className="text-base font-semibold text-gray-900">{title}</h3>
           )}
           {description && (
             <p className="mt-1 text-sm text-gray-500">{description}</p>
