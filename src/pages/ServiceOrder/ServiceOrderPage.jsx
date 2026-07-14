@@ -239,6 +239,7 @@ export function ServiceOrderPage() {
       paymentType: "",
       otherCharges: [], // Array to store multiple charges
       parts: [], // Initialize with empty array
+      externalParts: [], // Array to store external materials from other shops
       status: "pending",
       createdAt: new Date().toISOString(),
       invoiceNumber: "",
@@ -260,6 +261,7 @@ export function ServiceOrderPage() {
     paymentType: "",
     otherCharges: [],
     parts: [],
+    externalParts: [],
     status: "pending",
     createdAt: "",
     serviceType: "",
@@ -374,6 +376,68 @@ export function ServiceOrderPage() {
       ].parts.filter((p) => p._id !== partId);
       setRepairs(updatedRepairs);
     }
+  };
+
+  // External Parts handlers
+  const handleAddExternalPart = (name, price, quantity, discountPercent) => {
+    if (!name.trim()) {
+      toast.warning("Please enter a material/part name");
+      return;
+    }
+
+    const parsedPrice = parseFloat(price) || 0;
+    const parsedQuantity = parseInt(quantity, 10) || 1;
+    const parsedDiscount = Math.max(0, parseFloat(discountPercent) || 0);
+
+    if (parsedPrice < 0) {
+      toast.warning("Price cannot be negative");
+      return;
+    }
+
+    const updatedRepairs = [...repairs];
+    if (!updatedRepairs[currentRepairIndex].externalParts) {
+      updatedRepairs[currentRepairIndex].externalParts = [];
+    }
+
+    updatedRepairs[currentRepairIndex].externalParts.push({
+      id: Date.now() + Math.random(),
+      name: name.trim(),
+      price: parsedPrice,
+      quantity: parsedQuantity,
+      source: "external", // Mark as external
+    });
+
+    setRepairs(updatedRepairs);
+    toast.success("External material added to repair");
+  };
+
+  const handleRemoveExternalPart = (partId) => {
+    const updatedRepairs = [...repairs];
+    if (updatedRepairs[currentRepairIndex]?.externalParts) {
+      updatedRepairs[currentRepairIndex].externalParts = updatedRepairs[
+        currentRepairIndex
+      ].externalParts.filter((p) => p.id !== partId);
+      setRepairs(updatedRepairs);
+    }
+  };
+
+  const handleUpdateExternalPartDiscount = (partId, discountPercent) => {
+    const updatedRepairs = [...repairs];
+    const externalParts = updatedRepairs[currentRepairIndex]?.externalParts || [];
+    const partIndex = externalParts.findIndex((part) => part.id === partId);
+
+    if (partIndex >= 0) {
+      const parsedDiscount = Math.max(0, parseFloat(discountPercent) || 0);
+      updatedRepairs[currentRepairIndex].externalParts[partIndex].discountPercent = parsedDiscount;
+      setRepairs(updatedRepairs);
+    }
+  };
+
+  const getExternalPartLineTotal = (part) => {
+    const price = parseFloat(part?.price) || 0;
+    const quantity = parseInt(part?.quantity, 10) || 0;
+    const discountedAmount = price * quantity;
+    return discountedAmount;
   };
 
   const handleUpdateRepairField = (field, value) => {
@@ -571,6 +635,7 @@ export function ServiceOrderPage() {
       paymentType: "",
       otherCharges: [], // Array to store multiple charges
       parts: [], // Initialize with empty array
+      externalParts: [], // Array to store external materials from other shops
       status: "pending",
       createdAt: new Date().toISOString(),
       invoiceNumber: "",
@@ -600,8 +665,13 @@ export function ServiceOrderPage() {
       return sum + getPartLineTotal(part);
     }, 0);
 
+    const externalParts = repair.externalParts || [];
+    const externalPartsTotal = externalParts.reduce((sum, part) => {
+      return sum + getExternalPartLineTotal(part);
+    }, 0);
+
     const laborCost = parseFloat(repair.laborCost) || 0;
-    return partsTotal + laborCost;
+    return partsTotal + externalPartsTotal + laborCost;
   };
 
   const getBillDiscountAmount = (repair) => {
@@ -791,7 +861,11 @@ export function ServiceOrderPage() {
         name: part.name,
         price: part.price,
         quantity: part.quantity,
-        discountPercent: part.discountPercent || 0,
+      })),
+      externalParts: (currentRepair.externalParts || []).map((part) => ({
+        name: part.name,
+        price: part.price,
+        quantity: part.quantity,
       })),
       billDiscountPercent: parseFloat(currentRepair.billDiscountPercent) || 0,
       status: "completed",
@@ -832,6 +906,7 @@ export function ServiceOrderPage() {
         otherCharges: currentRepair.otherCharges || [],
         otherChargeAmount: getOtherChargeAmount(currentRepair),
         parts: currentRepair.parts || [],
+        externalParts: currentRepair.externalParts || [],
         status: "completed",
         totalAmount: calculateRepairTotal(currentRepair),
         serviceType: serviceTypeEntries[0]?.serviceType || currentRepair.serviceType,
@@ -1511,6 +1586,124 @@ export function ServiceOrderPage() {
                   <FileText className="h-8 w-8 text-gray-400 mx-auto mb-2" />
                   <p className="text-sm text-gray-500">
                     No parts added. Select parts to include in this repair.
+                  </p>
+                </div>
+              )}
+            </div>
+          </Card>
+
+          {/* External Materials / Parts */}
+          <Card title={`External Materials & Parts - Repair #${currentRepairIndex + 1}`}>
+            <div className="space-y-4">
+              {/* Add External Materials Form */}
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+                <div className="flex-1">
+                  <label className="mb-1.5 block text-xs font-medium text-gray-700">
+                    Material/Part Name
+                  </label>
+                  <input
+                    type="text"
+                    id="externalPartName"
+                    placeholder="e.g., Windshield, Seat Cover, Brake Pads..."
+                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="w-24">
+                  <label className="mb-1.5 block text-xs font-medium text-gray-700">
+                    Price (Rs.)
+                  </label>
+                  <input
+                    type="number"
+                    id="externalPartPrice"
+                    min="0"
+                    step="0.01"
+                    defaultValue="0"
+                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="w-20">
+                  <label className="mb-1.5 block text-xs font-medium text-gray-700">
+                    Qty
+                  </label>
+                  <input
+                    type="number"
+                    id="externalPartQty"
+                    min="1"
+                    defaultValue="1"
+                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+                <Button
+                  onClick={() => {
+                    const name = document.getElementById("externalPartName").value;
+                    const price = document.getElementById("externalPartPrice").value;
+                    const qty = document.getElementById("externalPartQty").value;
+                    handleAddExternalPart(name, price, qty, discount);
+                    document.getElementById("externalPartName").value = "";
+                    document.getElementById("externalPartPrice").value = "0";
+                    document.getElementById("externalPartQty").value = "1";
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" /> Add
+                </Button>
+              </div>
+
+              {/* External Parts List */}
+              {currentRepair.externalParts && currentRepair.externalParts.length > 0 ? (
+                <div className="overflow-hidden rounded-lg border border-amber-200 bg-amber-50">
+                  <table className="min-w-full divide-y divide-amber-200">
+                    <thead className="bg-amber-100">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-amber-900 uppercase">
+                          Material/Part Name
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-amber-900 uppercase">
+                          Price
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-amber-900 uppercase">
+                          Qty
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-amber-900 uppercase">
+                          Total
+                        </th>
+                        <th className="px-4 py-3 text-right text-xs font-medium text-amber-900 uppercase">
+                          Action
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-amber-200">
+                      {(currentRepair.externalParts || []).map((part, index) => (
+                        <tr key={part.id || index} className="hover:bg-amber-50">
+                          <td className="px-4 py-3 text-xs text-gray-900">
+                            {part.name}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-gray-900 text-right">
+                            Rs. {(part.price || 0).toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-gray-900 text-right">
+                            {part.quantity || 0}
+                          </td>
+                          <td className="px-4 py-3 text-xs font-medium text-gray-900 text-right">
+                            Rs. {getExternalPartLineTotal(part).toFixed(2)}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <button
+                              onClick={() => handleRemoveExternalPart(part.id)}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-8 bg-amber-50 rounded-lg border border-dashed border-amber-300">
+                  <AlertCircle className="h-8 w-8 text-amber-400 mx-auto mb-2" />
+                  <p className="text-sm text-amber-700">
+                    No external materials added. Add materials brought from other shops.
                   </p>
                 </div>
               )}

@@ -142,7 +142,11 @@ const generateServiceHistoryHTML = (serviceOrder) => {
     (sum, part) => sum + (part.price || 0) * (part.quantity || 0) * (1 - (part.discountPercent || 0) / 100),
     0,
   );
-  const subtotalBeforeDiscount = serviceChargeTotal + materialsSubtotal;
+  const externalMaterialsSubtotal = (serviceOrder.externalParts || []).reduce(
+    (sum, part) => sum + (part.price || 0) * (part.quantity || 0) * (1 - (part.discountPercent || 0) / 100),
+    0,
+  );
+  const subtotalBeforeDiscount = serviceChargeTotal + materialsSubtotal + externalMaterialsSubtotal;
   const totalDiscountAmount = subtotalBeforeDiscount * ((serviceOrder.billDiscountPercent || 0) / 100);
 
   return `
@@ -574,6 +578,34 @@ const generateServiceHistoryHTML = (serviceOrder) => {
       </tbody>
     </table>
 
+    <!-- EXTERNAL MATERIALS TABLE (NEW) -->
+    ${(serviceOrder.externalParts || []).length > 0 ? `
+    <table style="margin-top: 30px;">
+      <thead>
+        <tr">
+          <th style="font-weight:500; font-size:11px;"">External Materials & Parts</th>
+          <th style="font-weight:500; font-size:11px;">Quantity</th>
+          <th style="font-weight:500; font-size:11px;">Unit Price</th>
+          <th style="font-weight:500; font-size:11px;">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${(serviceOrder.externalParts || [])
+          .map(
+            (p) => `
+          <tr>
+            <td style="font-weight:600; color:#111827; font-size:10px;">${p.name || "Material"}</td>
+            <td style="font-weight:500; color:#111827; font-size:10px; text-align: left;">${p.quantity || 0}</td>
+            <td style="font-weight:500; color:#111827; font-size:10px; text-align: left;">${formatCurrency(p.price || 0)}</td>
+            <td style="font-weight:500; color:#111827; font-size:10px; text-align: right;">${formatCurrency((p.quantity || 0) * (p.price || 0) * (1 - (p.discountPercent || 0) / 100))}</td>
+          </tr>
+        `,
+          )
+          .join("")}
+      </tbody>
+    </table>
+    ` : ''}
+
     <!-- SUMMARY SECTION (service charge, materials, other charges, card fee, total) -->
     <div class="summary">
       <div class="summary-row">
@@ -584,6 +616,13 @@ const generateServiceHistoryHTML = (serviceOrder) => {
         <span class="summary-label">Materials (Parts)</span>
         <span class="summary-label">${formatCurrency((serviceOrder.parts || []).reduce((a, p) => a + p.price * p.quantity * (1 - (p.discountPercent || 0) / 100), 0))}</span>
       </div>
+
+      ${(serviceOrder.externalParts || []).length > 0 ? `
+      <div class="summary-row">
+        <span class="summary-label">External Materials</span>
+        <span class="summary-label">${formatCurrency((serviceOrder.externalParts || []).reduce((a, p) => a + p.price * p.quantity * (1 - (p.discountPercent || 0) / 100), 0))}</span>
+      </div>
+      ` : ''}
 
       <!-- Other charges displayed line by line (e.g., Dent repair, Tyre replacement, etc) -->
       ${(serviceOrder.otherCharges || [])
