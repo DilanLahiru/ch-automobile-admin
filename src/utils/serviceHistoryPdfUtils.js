@@ -60,7 +60,7 @@ const getRepairSubtotal = (repair) => {
       return serviceOrder.serviceTypeEntries.map((entry) => ({
         serviceType: entry.serviceType || "Service",
         description: entry.description || "",
-        servicePrice: parseFloat(entry.servicePrice) || 0,
+        servicePrice: parseFloat(entry.serviceRate || entry.servicePrice || 0) || 0,
         laborCost: parseFloat(entry.laborCost || entry.servicePrice || 0) || 0,
       }));
     }
@@ -70,6 +70,7 @@ const getRepairSubtotal = (repair) => {
         {
           serviceType: serviceOrder.serviceType || "General Service",
           description: serviceOrder.serviceDescription || "",
+          servicePrice: parseFloat(serviceOrder.laborCost || 0) || 0,
           laborCost: parseFloat(serviceOrder.laborCost || 0) || 0,
         },
       ];
@@ -87,7 +88,7 @@ const generateServiceHistoryHTML = (serviceOrder) => {
         <tr>
           <td>
             <div style="font-weight:600; color:#111827; font-size:10px;">${entry.serviceType || "Service"}</div>
-            ${entry.description ? `<div style="font-size:10px; color:#64748b; margin-top:4px;">${entry.description}</div>` : ""}
+            ${entry.description ? `<div style="font-size:10px; color:#666; margin-top:4px;">${entry.description}</div>` : ""}
           </td>
           <td style="font-size:10px; color:#111827">${formatCurrency(entry.servicePrice || 0)}</td>
           <td style="font-size:10px; color:#111827">${formatCurrency(entry.laborCost || 0)}</td>
@@ -134,20 +135,68 @@ const generateServiceHistoryHTML = (serviceOrder) => {
     0,
   );
 
-  const serviceChargeTotal = serviceEntries.reduce(
+  // Calculate service charge at full rate
+  const serviceChargeAtRate = serviceEntries.reduce(
+    (sum, entry) => sum + (entry.servicePrice || 0),
+    0,
+  );
+
+  // Calculate service charge at actual amount
+  const serviceChargeAtAmount = serviceEntries.reduce(
     (sum, entry) => sum + (entry.laborCost || 0),
     0,
   );
-  const materialsSubtotal = (serviceOrder.parts || []).reduce(
-    (sum, part) => sum + (part.price || 0) * (part.quantity || 0) * (1 - (part.discountPercent || 0) / 100),
+
+  // Calculate service discount (rate - amount)
+  const serviceDiscount = Math.max(0, serviceChargeAtRate - serviceChargeAtAmount);
+
+  // Calculate material prices at full price
+  const materialsFullPrice = (serviceOrder.parts || []).reduce(
+    (sum, part) => sum + (part.price || 0) * (part.quantity || 0),
     0,
   );
-  const externalMaterialsSubtotal = (serviceOrder.externalParts || []).reduce(
-    (sum, part) => sum + (part.price || 0) * (part.quantity || 0) * (1 - (part.discountPercent || 0) / 100),
+
+  // Calculate material discount from percent discounts
+  const materialsDiscount = (serviceOrder.parts || []).reduce(
+    (sum, part) => {
+      const basePrice = (part.price || 0) * (part.quantity || 0);
+      const discountPercent = parseFloat(part.discountPercent) || 0;
+      return sum + (basePrice * (discountPercent / 100));
+    },
     0,
   );
-  const subtotalBeforeDiscount = serviceChargeTotal + materialsSubtotal + externalMaterialsSubtotal;
-  const totalDiscountAmount = subtotalBeforeDiscount * ((serviceOrder.billDiscountPercent || 0) / 100);
+
+  // Calculate material prices after discount
+  const materialsSubtotal = materialsFullPrice - materialsDiscount;
+
+  // Calculate external material prices at full price
+  const externalMaterialsFullPrice = (serviceOrder.externalParts || []).reduce(
+    (sum, part) => sum + (part.price || 0) * (part.quantity || 0),
+    0,
+  );
+
+  // Calculate external material discount from percent discounts
+  const externalMaterialsDiscount = (serviceOrder.externalParts || []).reduce(
+    (sum, part) => {
+      const basePrice = (part.price || 0) * (part.quantity || 0);
+      const discountPercent = parseFloat(part.discountPercent) || 0;
+      return sum + (basePrice * (discountPercent / 100));
+    },
+    0,
+  );
+
+  // Calculate external material prices after discount
+  const externalMaterialsSubtotal = externalMaterialsFullPrice - externalMaterialsDiscount;
+
+  // Total discount from all sources
+  const totalDiscount = serviceDiscount + materialsDiscount + externalMaterialsDiscount;
+
+  // Subtotal before any discount and if payment type is card, include card processing fee in subtotal
+  const cardProcessingFee = serviceOrder.paymentType === "card" ? (serviceChargeAtRate + materialsFullPrice + externalMaterialsFullPrice) * 0.03 : 0;
+  const subtotalBeforeDiscount = serviceChargeAtRate + materialsFullPrice + externalMaterialsFullPrice + cardProcessingFee + otherChargesTotal;
+
+  // Subtotal after all discounts
+  const subtotalAfterDiscount = subtotalBeforeDiscount - totalDiscount;
 
   return `
   <!DOCTYPE html>
@@ -213,7 +262,7 @@ const generateServiceHistoryHTML = (serviceOrder) => {
     .top-info {
       display: flex;
       justify-content: space-between;
-      margin-top: 10px;
+      margin-top: 5px;
     }
 
     .block {
@@ -297,7 +346,7 @@ const generateServiceHistoryHTML = (serviceOrder) => {
     }
 
     .summary-label {
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 500;
       color: #666;
     }
@@ -463,7 +512,7 @@ const generateServiceHistoryHTML = (serviceOrder) => {
       font-weight: 400;
     }
     .note {
-      margin-top: 40px;
+      margin-top: 20px;
       line-height: 1.6;
       font-size: 11px;
       padding: 12px 14px;
@@ -497,7 +546,7 @@ const generateServiceHistoryHTML = (serviceOrder) => {
       <div class="block" style="display:flex; gap:12px; align-items:flex-start;">
         <div class="label" style="min-width:40px;">Bill to:</div>
         <div class="small" style="flex:1;">
-          <div style="color:#111827;">${serviceOrder.customerId?.name || "N/A"}</div>
+          <div style="color:#111827;">${serviceOrder.customerId?.name || ""}</div>
           <div style="margin-top:2px; color:#374151;">${serviceOrder.customerId?.contactNumber || ""}<br>
           ${serviceOrder.customerId?.email || ""}<br>
           ${serviceOrder.vehicleNumber || ""}</div>
@@ -506,23 +555,23 @@ const generateServiceHistoryHTML = (serviceOrder) => {
       <div class="invoice-meta">
       <div class="status">
           <b style="font-size:11px;">Invoice</b>
-          <div style="font-size:11px; margin-top:5px; font-weight:500; color:#666;">${serviceOrder.invoiceNumber || "N/A"}</div>
+          <div style="font-size:11px; margin-top:3px; font-weight:500; color:#666;">${serviceOrder.invoiceNumber || "N/A"}</div>
         </div>
         <div class="status">
           <b style="font-size:11px;">Invoice Date</b>
-          <div style="font-size:11px; margin-top:5px; font-weight:500; color:#666;">${formatDate(serviceOrder.createdAt)}</div>
+          <div style="font-size:11px; margin-top:3px; font-weight:500; color:#666;">${formatDate(serviceOrder.createdAt)}</div>
         </div>
         <div class="status">
           <b style="font-size:11px;">Status</b>
-          <div style="font-size:11px; margin-top:5px; font-weight:500; color:#666;">${serviceOrder.status ? serviceOrder.status.charAt(0).toUpperCase() + serviceOrder.status.slice(1) : "Completed"}</div>
+          <div style="font-size:11px; margin-top:3px; font-weight:500; color:#666;">${serviceOrder.status ? serviceOrder.status.charAt(0).toUpperCase() + serviceOrder.status.slice(1) : "Completed"}</div>
         </div>
         <div class="status">
           <b style="font-size:11px;">Technician</b>
-          <div style="font-size:11px; margin-top:5px; font-weight:500; color:#666;">${serviceOrder.employeeId?.name || "N/A"}</div>
+          <div style="font-size:11px; margin-top:3px; font-weight:500; color:#666;">${serviceOrder.employeeId?.name || "N/A"}</div>
         </div>
         <div class="status">
           <b style="font-size:11px;">Payment Method</b>
-          <div style="font-size:11px; margin-top:5px; font-weight:500; color:#666;">${serviceOrder.paymentType ? (serviceOrder.paymentType === "bank-transfer" ? "Bank Transfer" : serviceOrder.paymentType.charAt(0).toUpperCase() + serviceOrder.paymentType.slice(1)) : "N/A"}</div>
+          <div style="font-size:11px; margin-top:3px; font-weight:500; color:#666;">${serviceOrder.paymentType ? (serviceOrder.paymentType === "bank-transfer" ? "Bank Transfer" : serviceOrder.paymentType.charAt(0).toUpperCase() + serviceOrder.paymentType.slice(1)) : "N/A"}</div>
         </div>
       </div>
     </div>
@@ -609,22 +658,24 @@ const generateServiceHistoryHTML = (serviceOrder) => {
     <!-- SUMMARY SECTION (service charge, materials, other charges, card fee, total) -->
     <div class="summary">
       <div class="summary-row">
-        <span class="summary-label">Service Charge</span>
-        <span class="summary-label">${formatCurrency(serviceEntries.reduce((sum, entry) => sum + (entry.laborCost || 0), 0))}</span>
-      </div>
-      <div class="summary-row">
-        <span class="summary-label">Materials (Parts)</span>
-        <span class="summary-label">${formatCurrency((serviceOrder.parts || []).reduce((a, p) => a + p.price * p.quantity * (1 - (p.discountPercent || 0) / 100), 0))}</span>
+        <span class="summary-label" style="font-weight: 500;">Service Charge</span>
+        <span class="summary-label" style="font-weight: 500;">${formatCurrency(serviceChargeAtAmount)}</span>
       </div>
 
+      <div class="summary-row">
+        <span class="summary-label" style="font-weight: 500;">Materials Charge</span>
+        <span class="summary-label" style="font-weight: 500;">${formatCurrency(materialsSubtotal)}</span>
+      </div>
+
+      <!-- External materials charge -->
       ${(serviceOrder.externalParts || []).length > 0 ? `
       <div class="summary-row">
-        <span class="summary-label">External Materials</span>
-        <span class="summary-label">${formatCurrency((serviceOrder.externalParts || []).reduce((a, p) => a + p.price * p.quantity * (1 - (p.discountPercent || 0) / 100), 0))}</span>
+        <span class="summary-label" style="font-weight: 500;">External Materials Charge</span>
+        <span class="summary-label" style="font-weight: 500;">${formatCurrency(externalMaterialsSubtotal)}</span>
       </div>
       ` : ''}
 
-      <!-- Other charges displayed line by line (e.g., Dent repair, Tyre replacement, etc) -->
+        <!-- Other charges displayed line by line (e.g., Dent repair, Tyre replacement, etc) -->
       ${(serviceOrder.otherCharges || [])
         .map(
           (charge) => `
@@ -636,7 +687,7 @@ const generateServiceHistoryHTML = (serviceOrder) => {
         )
         .join("")}
 
-      ${
+        ${
         serviceOrder.paymentType === "card"
           ? `
         <div class="summary-row">
@@ -646,24 +697,27 @@ const generateServiceHistoryHTML = (serviceOrder) => {
       `
           : ""
       }
-      ${
-        serviceOrder.billDiscountPercent && serviceOrder.billDiscountPercent > 0
-          ? `
+      ${totalDiscount > 0 ? `
         <div class="summary-row">
-          <span class="summary-label">Total Discount</span>
-          <span class="summary-label">${formatCurrency(totalDiscountAmount)}</span>
-        </div>
-      `
-          : ""
-      }
+        <span class="summary-label" style="font-weight: 600; color: #000;">Total Discount</span>
+        <span class="summary-label" style="font-weight: 600; color: #000;">- ${formatCurrency(totalDiscount)}</span>
+      </div>
+
       <div style="border-bottom: 2px solid #eee;
       font-weight: 600;
       color: #666; margin-top: 10px; "></div>
-      <div class="summary-row total">
-        <span>Total Amount</span>
-        <span>${formatCurrency(serviceOrder.totalAmount)}</span>
+      <div class="summary-row">
+        <span class="summary-label total" style="font-weight: 600; color: #000;">Total Amount</span>
+        <span class="summary-label total" style="font-weight: 600; color: #000;">${formatCurrency(subtotalAfterDiscount)}</span>
       </div>
     </div>
+
+      </div>
+      ` : ''}
+
+      
+
+      
 
     <!-- Service report / description note (kept as original style) -->
     <div class="note">

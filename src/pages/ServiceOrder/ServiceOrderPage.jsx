@@ -235,7 +235,6 @@ export function ServiceOrderPage() {
       servicePrice: 0,
       serviceDescription: "",
       laborCost: 0,
-      billDiscountPercent: 0,
       paymentType: "",
       otherCharges: [], // Array to store multiple charges
       parts: [], // Initialize with empty array
@@ -257,7 +256,6 @@ export function ServiceOrderPage() {
     servicePrice: 0,
     serviceDescription: "",
     laborCost: 4500,
-    billDiscountPercent: 0,
     paymentType: "",
     otherCharges: [],
     parts: [],
@@ -631,7 +629,6 @@ export function ServiceOrderPage() {
       servicePrice: 0,
       serviceDescription: "",
       laborCost: 0,
-      billDiscountPercent: 0,
       paymentType: "",
       otherCharges: [], // Array to store multiple charges
       parts: [], // Initialize with empty array
@@ -674,16 +671,72 @@ export function ServiceOrderPage() {
     return partsTotal + externalPartsTotal + laborCost;
   };
 
-  const getBillDiscountAmount = (repair) => {
+  // Calculate service discount (difference between rate and actual amount)
+  const getServiceDiscountAmount = (repair) => {
+    if (!repair || !repair.serviceTypeEntries) return 0;
+    return (repair.serviceTypeEntries || []).reduce((total, entry) => {
+      const rate = parseFloat(entry.serviceRate) || 0;
+      const amount = parseFloat(entry.laborCost) || 0;
+      const discount = Math.max(0, rate - amount);
+      return total + discount;
+    }, 0);
+  };
+
+  // Calculate material discount (sum of all per-item material discounts)
+  const getMaterialDiscountAmount = (repair) => {
     if (!repair) return 0;
-    const subtotal = getRepairSubtotal(repair);
-    const discountPercent = parseFloat(repair.billDiscountPercent) || 0;
-    return Math.max(0, subtotal * (Math.min(100, Math.max(0, discountPercent)) / 100));
+    
+    // Stock parts discount
+    const stockDiscount = (repair.parts || []).reduce((total, part) => {
+      const basePrice = (parseFloat(part.price) || 0) * (parseInt(part.quantity) || 0);
+      const discountPercent = parseFloat(part.discountPercent) || 0;
+      const discount = basePrice * (discountPercent / 100);
+      return total + discount;
+    }, 0);
+
+    // External parts discount
+    const externalDiscount = (repair.externalParts || []).reduce((total, part) => {
+      const basePrice = (parseFloat(part.price) || 0) * (parseInt(part.quantity) || 0);
+      const discountPercent = parseFloat(part.discountPercent) || 0;
+      const discount = basePrice * (discountPercent / 100);
+      return total + discount;
+    }, 0);
+
+    return stockDiscount + externalDiscount;
+  };
+
+  // Calculate total discount from all sources (service + materials)
+  const getTotalDiscountAmount = (repair) => {
+    return getServiceDiscountAmount(repair) + getMaterialDiscountAmount(repair);
+  };
+
+  // Get subtotal before any discounts
+  const getSubtotalBeforeDiscount = (repair) => {
+    if (!repair) return 0;
+
+    // Service charge at full rate
+    const serviceTotal = (repair.serviceTypeEntries || []).reduce((total, entry) => {
+      const rate = parseFloat(entry.serviceRate) || 0;
+      return total + rate;
+    }, 0);
+
+    // Material at full price (before discount)
+    const stockMaterialTotal = (repair.parts || []).reduce((total, part) => {
+      const basePrice = (parseFloat(part.price) || 0) * (parseInt(part.quantity) || 0);
+      return total + basePrice;
+    }, 0);
+
+    const externalMaterialTotal = (repair.externalParts || []).reduce((total, part) => {
+      const basePrice = (parseFloat(part.price) || 0) * (parseInt(part.quantity) || 0);
+      return total + basePrice;
+    }, 0);
+
+    return serviceTotal + stockMaterialTotal + externalMaterialTotal;
   };
 
   const getSubtotalAfterDiscount = (repair) => {
     if (!repair) return 0;
-    return getRepairSubtotal(repair) - getBillDiscountAmount(repair);
+    return getSubtotalBeforeDiscount(repair) - getTotalDiscountAmount(repair);
   };
 
   const calculateCardProcessingFee = (repair) => {
@@ -861,13 +914,14 @@ export function ServiceOrderPage() {
         name: part.name,
         price: part.price,
         quantity: part.quantity,
+        discountPercent: part.discountPercent || 0,
       })),
       externalParts: (currentRepair.externalParts || []).map((part) => ({
         name: part.name,
         price: part.price,
         quantity: part.quantity,
+        discountPercent: part.discountPercent || 0,
       })),
-      billDiscountPercent: parseFloat(currentRepair.billDiscountPercent) || 0,
       status: "completed",
       totalAmount: calculateRepairTotal(currentRepair),
       serviceTypeId: serviceTypeEntries[0]?.serviceTypeId || currentRepair.serviceTypeId,
@@ -1790,45 +1844,46 @@ export function ServiceOrderPage() {
                     Auto-calculated from each added service type entry.
                   </p>
                 </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-gray-700">
-                    Bill Discount (%)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="1"
-                    value={parseFloat(currentRepair.billDiscountPercent || 0)}
-                    onChange={(e) => handleUpdateRepairField("billDiscountPercent", e.target.value)}
-                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
               </div>
 
               <div className="border-t border-gray-100 pt-4 space-y-2">
                 <div className="flex justify-between text-xs text-gray-600">
-                  <span>Parts Total:</span>
+                  <span>Subtotal (before discount):</span>
                   <span>
-                    Rs. {getRepairSubtotal({ ...currentRepair, laborCost: 0 }).toFixed(2)}
+                    Rs. {getSubtotalBeforeDiscount(currentRepair).toFixed(2)}
                   </span>
                 </div>
-                <div className="flex justify-between text-xs text-gray-600">
-                  <span>Labor:</span>
-                  <span>
-                    Rs. {(parseFloat(currentRepair.laborCost) || 0).toFixed(2)}
-                  </span>
-                </div>
-                {parseFloat(currentRepair.billDiscountPercent || 0) > 0 && (
-                  <div className="flex justify-between text-xs text-red-600 bg-red-50 px-3 py-2 rounded">
-                    <span>Bill Discount:</span>
-                    <span className="font-medium">
-                      - Rs. {getBillDiscountAmount(currentRepair).toFixed(2)}
-                    </span>
-                  </div>
+                
+                {getTotalDiscountAmount(currentRepair) > 0 && (
+                  <>
+                    <div className="text-xs font-medium text-gray-700 mt-3 mb-2">Discounts:</div>
+                    {getServiceDiscountAmount(currentRepair) > 0 && (
+                      <div className="flex justify-between text-xs text-red-600 bg-red-50 px-3 py-2 rounded ml-2">
+                        <span>Service Rate Discount:</span>
+                        <span className="font-medium">
+                          - Rs. {getServiceDiscountAmount(currentRepair).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                    {getMaterialDiscountAmount(currentRepair) > 0 && (
+                      <div className="flex justify-between text-xs text-red-600 bg-red-50 px-3 py-2 rounded ml-2">
+                        <span>Material Discount:</span>
+                        <span className="font-medium">
+                          - Rs. {getMaterialDiscountAmount(currentRepair).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-xs text-red-700 font-semibold bg-red-100 px-3 py-2 rounded">
+                      <span>Total Discount:</span>
+                      <span>
+                        - Rs. {getTotalDiscountAmount(currentRepair).toFixed(2)}
+                      </span>
+                    </div>
+                  </>
                 )}
+                
                 <div className="flex justify-between text-base font-semibold text-gray-900 pt-2 border-t border-gray-100">
-                  <span>Subtotal:</span>
+                  <span>After Discount:</span>
                   <span>
                     Rs. {getSubtotalAfterDiscount(currentRepair).toFixed(2)}
                   </span>
