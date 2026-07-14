@@ -134,6 +134,17 @@ const generateServiceHistoryHTML = (serviceOrder) => {
     0,
   );
 
+  const serviceChargeTotal = serviceEntries.reduce(
+    (sum, entry) => sum + (entry.laborCost || 0),
+    0,
+  );
+  const materialsSubtotal = (serviceOrder.parts || []).reduce(
+    (sum, part) => sum + (part.price || 0) * (part.quantity || 0) * (1 - (part.discountPercent || 0) / 100),
+    0,
+  );
+  const subtotalBeforeDiscount = serviceChargeTotal + materialsSubtotal;
+  const totalDiscountAmount = subtotalBeforeDiscount * ((serviceOrder.billDiscountPercent || 0) / 100);
+
   return `
   <!DOCTYPE html>
 <html>
@@ -543,10 +554,10 @@ const generateServiceHistoryHTML = (serviceOrder) => {
             (p) => `
           <tr>
             <td style="font-weight:600; color:#111827; font-size:10px;">${p.name || "Part"}</td>
-            <td style="font-weight:600; color:#111827; font-size:10px;">${p.quantity || 0}</td>
-            <td style="font-weight:600; color:#111827; font-size:10px;">${formatCurrency(p.price || 0)}</td>
-            <td style="font-weight:600; color:#111827; font-size:10px; text-align: center;">${p.discountPercent || 0}%</td>
-            <td style="font-weight:600; color:#111827; font-size:10px;">${formatCurrency((p.quantity || 0) * (p.price || 0) * (1 - (p.discountPercent || 0) / 100))}</td>
+            <td style="font-weight:500; color:#111827; font-size:10px;">${p.quantity || 0}</td>
+            <td style="font-weight:500; color:#111827; font-size:10px;">${formatCurrency(p.price || 0)}</td>
+            <td style="font-weight:500; color:#111827; font-size:10px; text-align: center;">${p.discountPercent || 0}%</td>
+            <td style="font-weight:500; color:#111827; font-size:10px;">${formatCurrency((p.quantity || 0) * (p.price || 0) * (1 - (p.discountPercent || 0) / 100))}</td>
           </tr>
         `,
           )
@@ -596,10 +607,16 @@ const generateServiceHistoryHTML = (serviceOrder) => {
       `
           : ""
       }
-      <div class="summary-row">
-        <span class="summary-label">Total Discount</span>
-        <span class="summary-label">${serviceOrder.billDiscountPercent || 0}%</span>
-      </div>
+      ${
+        serviceOrder.billDiscountPercent && serviceOrder.billDiscountPercent > 0
+          ? `
+        <div class="summary-row">
+          <span class="summary-label">Total Discount</span>
+          <span class="summary-label">${formatCurrency(totalDiscountAmount)}</span>
+        </div>
+      `
+          : ""
+      }
       <div style="border-bottom: 2px solid #eee;
       font-weight: 600;
       color: #666; margin-top: 10px; "></div>
