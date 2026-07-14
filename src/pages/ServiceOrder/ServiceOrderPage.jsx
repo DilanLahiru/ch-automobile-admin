@@ -1638,7 +1638,7 @@ export function ServiceOrderPage() {
                     const name = document.getElementById("externalPartName").value;
                     const price = document.getElementById("externalPartPrice").value;
                     const qty = document.getElementById("externalPartQty").value;
-                    handleAddExternalPart(name, price, qty, discount);
+                    handleAddExternalPart(name, price, qty);
                     document.getElementById("externalPartName").value = "";
                     document.getElementById("externalPartPrice").value = "0";
                     document.getElementById("externalPartQty").value = "1";
