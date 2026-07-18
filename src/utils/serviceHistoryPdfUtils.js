@@ -692,28 +692,29 @@ const generateServiceHistoryHTML = (serviceOrder) => {
           ? `
         <div class="summary-row">
           <span class="summary-label">Card Processing Fee (3%)</span>
-          <span class="summary-label">${formatCurrency(calculateCardProcessingFee(serviceOrder))}</span>
+          <span class="summary-label">${formatCurrency(serviceOrder.cardProcessingFee)}</span>
         </div>
       `
           : ""
       }
-      ${totalDiscount > 0 ? `
+      
+      ${serviceOrder.totalDiscount > 0 ? `
         <div class="summary-row">
         <span class="summary-label" style="font-weight: 600; color: #000;">Total Discount</span>
-        <span class="summary-label" style="font-weight: 600; color: #000;">- ${formatCurrency(totalDiscount)}</span>
+        <span class="summary-label" style="font-weight: 600; color: #000;">- ${formatCurrency(serviceOrder.totalDiscount)}</span>
       </div>
+      ` : ''}
 
       <div style="border-bottom: 2px solid #eee;
       font-weight: 600;
       color: #666; margin-top: 10px; "></div>
       <div class="summary-row">
         <span class="summary-label total" style="font-weight: 600; color: #000;">Total Amount</span>
-        <span class="summary-label total" style="font-weight: 600; color: #000;">${formatCurrency(subtotalAfterDiscount)}</span>
+        <span class="summary-label total" style="font-weight: 600; color: #000;">${formatCurrency(serviceOrder.totalAmount)}</span>
       </div>
     </div>
-
-      </div>
-      ` : ''}
+  </div>
+      
 
       
 

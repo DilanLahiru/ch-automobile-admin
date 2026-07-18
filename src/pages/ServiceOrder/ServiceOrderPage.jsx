@@ -710,46 +710,56 @@ export function ServiceOrderPage() {
     return getServiceDiscountAmount(repair) + getMaterialDiscountAmount(repair);
   };
 
-  // Get subtotal before any discounts
-  const getSubtotalBeforeDiscount = (repair) => {
-    if (!repair) return 0;
-
-    // Service charge at full rate
-    const serviceTotal = (repair.serviceTypeEntries || []).reduce((total, entry) => {
-      const rate = parseFloat(entry.serviceRate) || 0;
-      return total + rate;
-    }, 0);
-
-    // Material at full price (before discount)
-    const stockMaterialTotal = (repair.parts || []).reduce((total, part) => {
-      const basePrice = (parseFloat(part.price) || 0) * (parseInt(part.quantity) || 0);
-      return total + basePrice;
-    }, 0);
-
-    const externalMaterialTotal = (repair.externalParts || []).reduce((total, part) => {
-      const basePrice = (parseFloat(part.price) || 0) * (parseInt(part.quantity) || 0);
-      return total + basePrice;
-    }, 0);
-
-    return serviceTotal + stockMaterialTotal + externalMaterialTotal;
-  };
-
-  const getSubtotalAfterDiscount = (repair) => {
-    if (!repair) return 0;
-    return getSubtotalBeforeDiscount(repair) - getTotalDiscountAmount(repair);
-  };
-
-  const calculateCardProcessingFee = (repair) => {
-    if (!repair || repair.paymentType !== "card") return 0;
-    const subtotal = getSubtotalAfterDiscount(repair);
-    return subtotal * 0.03;
-  };
-
   const getOtherChargeAmount = (repair) => {
     if (!repair || !repair.otherCharges || repair.otherCharges.length === 0) return 0;
     return repair.otherCharges.reduce((total, charge) => {
       return total + (parseFloat(charge.amount) || 0);
     }, 0);
+  };
+
+  const getBaseSubtotalBeforeDiscount = (repair) => {
+    if (!repair) return 0;
+
+    const serviceTotal = (repair.serviceTypeEntries || []).reduce((total, entry) => {
+      const rate = parseFloat(entry.serviceRate) || 0;
+      return total + rate;
+    }, 0);
+
+    const stockMaterialTotal = (repair.parts || []).reduce((total, part) => {
+      const basePrice = (parseFloat(part.price) || 0) * (parseInt(part.quantity, 10) || 0);
+      return total + basePrice;
+    }, 0);
+
+    const externalMaterialTotal = (repair.externalParts || []).reduce((total, part) => {
+      const basePrice = (parseFloat(part.price) || 0) * (parseInt(part.quantity, 10) || 0);
+      return total + basePrice;
+    }, 0);
+
+    return serviceTotal + stockMaterialTotal + externalMaterialTotal + getOtherChargeAmount(repair);
+  };
+
+  const getBaseSubtotalAfterDiscount = (repair) => {
+    if (!repair) return 0;
+    return getBaseSubtotalBeforeDiscount(repair) - getTotalDiscountAmount(repair);
+  };
+
+  const calculateCardProcessingFee = (repair) => {
+    if (!repair || repair.paymentType !== "card") return 0;
+    const subtotal = getBaseSubtotalAfterDiscount(repair);
+    return subtotal * 0.03;
+  };
+
+  const getSubtotalBeforeDiscount = (repair) => {
+    if (!repair) return 0;
+
+    const baseSubtotal = getBaseSubtotalBeforeDiscount(repair);
+    const fee = repair?.paymentType === "card" ? calculateCardProcessingFee(repair) : 0;
+    return baseSubtotal + fee;
+  };
+
+  const getSubtotalAfterDiscount = (repair) => {
+    if (!repair) return 0;
+    return getSubtotalBeforeDiscount(repair) - getTotalDiscountAmount(repair);
   };
 
   const handleAddOtherCharge = (chargeId) => {
@@ -807,11 +817,7 @@ export function ServiceOrderPage() {
 
   const calculateRepairTotal = (repair) => {
     if (!repair) return 0;
-    
-    const subtotal = getSubtotalAfterDiscount(repair);
-    const fee = calculateCardProcessingFee(repair);
-    const otherChargeAmount = getOtherChargeAmount(repair);
-    return subtotal + fee + otherChargeAmount;
+    return getSubtotalAfterDiscount(repair);
   };
 
   const calculateTotalWithFee = (repair) => {
@@ -928,6 +934,9 @@ export function ServiceOrderPage() {
       serviceType: serviceTypeEntries[0]?.serviceType || currentRepair.serviceType || 'General Service',
       serviceTypeEntries,
       invoiceNumber: invoiceNumber,
+      totalDiscount: getTotalDiscountAmount(currentRepair),
+      subtotalBeforeDiscount: getSubtotalBeforeDiscount(currentRepair),
+      subtotalAfterDiscount: getSubtotalAfterDiscount(currentRepair),
     };
 
     try {

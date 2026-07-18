@@ -142,7 +142,6 @@ export function StockManagementPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">Import CSV</Button>
           <Button
             leftIcon={<Plus className="h-4 w-4" />}
             onClick={() => setIsAddProductOpen(true)}
@@ -203,21 +202,21 @@ export function StockManagementPage() {
                         <Box className="h-5 w-5" />
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">{item.name}</p>
+                        <p className="font-medium text-gray-900 text-xs">{item.name}</p>
                         <p className="text-xs text-gray-500">{item.supplierName}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-gray-600">
+                  <td className="px-6 py-4 text-gray-600 text-xs">
                     {item.categoryName}
                   </td>
-                  <td className="px-6 py-4 font-medium text-gray-900">
+                  <td className="px-6 py-4 font-medium text-gray-900 text-xs">
                   Rs {item.price.toFixed(2)}
                   </td>
-                  <td className="px-6 py-4 font-medium text-gray-900">
+                  <td className="px-6 py-4 font-medium text-gray-900 text-xs">
                     {item.initialStock}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 text-xs">
                     <div className="flex items-center gap-2">
                       <span className="text-gray-900">{item.quantity}</span>
                       <span className="text-xs text-gray-400">
