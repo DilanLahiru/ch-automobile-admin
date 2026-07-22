@@ -22,12 +22,18 @@ import { getAllAppointments } from "../../features/appointmentSlice";
 import { getAllProducts } from "../../features/productSlice";
 import { getAllServiceTypes, createServiceType, selectServiceTypes } from "../../features/serviceTypeSlice";
 import { getAllOtherCharges, selectOtherCharges } from "../../features/otherChargesSlice";
-import { createServiceOrder } from "../../features/serviceOrderSlice";
+import {
+  createExternalMaterial,
+  createServiceOrder,
+  getAllExternalMaterials,
+} from "../../features/serviceOrderSlice";
 import { toast } from "react-toastify";
 import {
   downloadServiceHistoryAsPDF,
   printServiceHistory,
 } from "../../utils/serviceHistoryPdfUtils";
+
+const WORKING_SERVICE_ORDER_STORAGE_KEY = "serviceOrderWorkingState";
 
 export function ServiceOrderPage() {
   const dispatch = useDispatch();
@@ -42,7 +48,11 @@ export function ServiceOrderPage() {
   } = useSelector((state) => state.appointment);
   const { products: productsFromRedux, loading: isLoadingProducts } =
     useSelector((state) => state.product);
-  const { isLoading: isLoadingServiceOrder } = useSelector(
+  const {
+    isLoading: isLoadingServiceOrder,
+    externalMaterials,
+    isExternalMaterialsLoading,
+  } = useSelector(
     (state) => state.serviceOrder,
   );
   const serviceTypes = useSelector(selectServiceTypes);
@@ -53,6 +63,8 @@ export function ServiceOrderPage() {
   const [currentRepairIndex, setCurrentRepairIndex] = useState(0);
   const [showNewServiceTypeForm, setShowNewServiceTypeForm] = useState(false);
   const [activeServiceTypeEntryId, setActiveServiceTypeEntryId] = useState(null);
+  const [activeServiceTypeDropdownId, setActiveServiceTypeDropdownId] = useState(null);
+  const [serviceTypeSearchByEntry, setServiceTypeSearchByEntry] = useState({});
   const [newServiceTypeName, setNewServiceTypeName] = useState("");
   const [newServiceTypePrice, setNewServiceTypePrice] = useState("");
   const [isSavingServiceType, setIsSavingServiceType] = useState(false);
@@ -61,11 +73,25 @@ export function ServiceOrderPage() {
   const [loading, setLoading] = useState(true);
   const [completedServiceOrder, setCompletedServiceOrder] = useState(null);
   const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [activePartDropdown, setActivePartDropdown] = useState(false);
+  const [partSearchTerm, setPartSearchTerm] = useState("");
+  const [selectedPartId, setSelectedPartId] = useState("");
+  const [externalPartForm, setExternalPartForm] = useState({
+    name: "",
+    price: "",
+    quantity: "1",
+    discountPercent: "0",
+  });
+  const [showExternalPartSuggestions, setShowExternalPartSuggestions] =
+    useState(false);
+  const [hasHydratedWorkingState, setHasHydratedWorkingState] = useState(false);
 
   useEffect(() => {
     loadAllDetails();
-    loadDraftRepairs();
-    generateInvoiceNumber();
+    const hasRestoredWorkingState = loadDraftRepairs();
+    if (!hasRestoredWorkingState) {
+      generateInvoiceNumber();
+    }
   }, []);
 
   useEffect(() => {
@@ -82,13 +108,24 @@ export function ServiceOrderPage() {
 
   // Initialize repair when data is loaded
   useEffect(() => {
+    // Wait until localStorage hydration is complete before deciding to create a blank repair.
+    if (!hasHydratedWorkingState) {
+      return;
+    }
+
     if (!isLoadingAppointments && !isLoadingEmployees && !isLoadingProducts) {
       if (repairs.length === 0) {
         initializeNewRepair();
       }
       setLoading(false);
     }
-  }, [isLoadingAppointments, isLoadingEmployees, isLoadingProducts]);
+  }, [
+    isLoadingAppointments,
+    isLoadingEmployees,
+    isLoadingProducts,
+    hasHydratedWorkingState,
+    repairs.length,
+  ]);
 
   const loadAllDetails = async () => {
     try {
@@ -99,6 +136,7 @@ export function ServiceOrderPage() {
         dispatch(getAllProducts()),
         dispatch(getAllServiceTypes()),
         dispatch(getAllOtherCharges()),
+        dispatch(getAllExternalMaterials()),
       ]);
     } catch (error) {
       console.error("Error loading details:", error);
@@ -109,6 +147,8 @@ export function ServiceOrderPage() {
   };
 
   const loadDraftRepairs = () => {
+    let hasRestoredWorkingState = false;
+
     try {
       const savedDrafts = localStorage.getItem("serviceOrderDrafts");
       if (savedDrafts) {
@@ -117,10 +157,105 @@ export function ServiceOrderPage() {
           setDraftRepairs(drafts);
         }
       }
+
+      const workingState = localStorage.getItem(WORKING_SERVICE_ORDER_STORAGE_KEY);
+      if (workingState) {
+        const parsedWorkingState = JSON.parse(workingState);
+        const persistedRepairs = Array.isArray(parsedWorkingState?.repairs)
+          ? parsedWorkingState.repairs
+          : [];
+
+        if (persistedRepairs.length > 0) {
+          const hydratedRepairs = persistedRepairs.map((repair) =>
+            buildRepairWithServiceTypeEntries({
+              id: repair?.id || Date.now() + Math.random(),
+              vehicleNumber: repair?.vehicleNumber || "",
+              currentMileage: repair?.currentMileage ?? "",
+              employeeId: repair?.employeeId || "",
+              serviceTypeId: repair?.serviceTypeId || "",
+              servicePrice: repair?.servicePrice || 0,
+              serviceDescription: repair?.serviceDescription || "",
+              laborCost: repair?.laborCost || 0,
+              paymentType: repair?.paymentType || "",
+              otherCharges: Array.isArray(repair?.otherCharges)
+                ? repair.otherCharges
+                : [],
+              parts: Array.isArray(repair?.parts) ? repair.parts : [],
+              externalParts: Array.isArray(repair?.externalParts)
+                ? repair.externalParts
+                : [],
+              status: repair?.status || "pending",
+              createdAt: repair?.createdAt || new Date().toISOString(),
+              invoiceNumber: repair?.invoiceNumber || "",
+              serviceTypeEntries: Array.isArray(repair?.serviceTypeEntries)
+                ? repair.serviceTypeEntries
+                : [createServiceTypeEntry()],
+            }),
+          );
+
+          const nextCurrentRepairIndex = Math.min(
+            Math.max(parseInt(parsedWorkingState?.currentRepairIndex, 10) || 0, 0),
+            hydratedRepairs.length - 1,
+          );
+
+          setRepairs(hydratedRepairs);
+          setCurrentRepairIndex(nextCurrentRepairIndex);
+
+          if (parsedWorkingState?.invoiceNumber) {
+            setInvoiceNumber(parsedWorkingState.invoiceNumber);
+          }
+
+          hasRestoredWorkingState = true;
+          toast.info("Restored previous service order details");
+        }
+      }
     } catch (error) {
       console.error("Error loading drafts:", error);
+    } finally {
+      setHasHydratedWorkingState(true);
     }
+
+    return hasRestoredWorkingState;
   };
+
+  useEffect(() => {
+    if (!hasHydratedWorkingState) {
+      return;
+    }
+
+    const hasMeaningfulRepairData = repairs.some((repair) => {
+      const hasServiceTypeSelection = (repair.serviceTypeEntries || []).some(
+        (entry) => entry.serviceTypeId || entry.description,
+      );
+
+      return Boolean(
+        repair.vehicleNumber ||
+          repair.currentMileage !== "" ||
+          repair.employeeId ||
+          repair.paymentType ||
+          repair.serviceDescription?.trim() ||
+          hasServiceTypeSelection ||
+          (repair.parts || []).length > 0 ||
+          (repair.externalParts || []).length > 0 ||
+          (repair.otherCharges || []).length > 0,
+      );
+    });
+
+    if (!hasMeaningfulRepairData) {
+      localStorage.removeItem(WORKING_SERVICE_ORDER_STORAGE_KEY);
+      return;
+    }
+
+    localStorage.setItem(
+      WORKING_SERVICE_ORDER_STORAGE_KEY,
+      JSON.stringify({
+        repairs,
+        currentRepairIndex,
+        invoiceNumber,
+        lastModified: new Date().toISOString(),
+      }),
+    );
+  }, [repairs, currentRepairIndex, invoiceNumber, hasHydratedWorkingState]);
 
   const handleLoadDraft = (draft) => {
     setRepairs(draft.repairs);
@@ -230,6 +365,7 @@ export function ServiceOrderPage() {
     const newRepair = buildRepairWithServiceTypeEntries({
       id: Date.now(),
       vehicleNumber: "",
+      currentMileage: "",
       employeeId: "",
       serviceTypeId: "",
       servicePrice: 0,
@@ -251,6 +387,7 @@ export function ServiceOrderPage() {
   const currentRepair = repairs[currentRepairIndex] || {
     id: "",
     vehicleNumber: "",
+    currentMileage: "",
     employeeId: "",
     serviceTypeId: "",
     servicePrice: 0,
@@ -302,6 +439,40 @@ export function ServiceOrderPage() {
   const getAvailableParts = () => {
     const parts = Array.isArray(productsFromRedux) ? productsFromRedux : [];
     return parts;
+  };
+
+  const getFilteredParts = () => {
+    const searchTerm = partSearchTerm.trim().toLowerCase();
+    const parts = getAvailableParts();
+    if (!searchTerm) return parts;
+
+    return parts.filter((part) => {
+      const name = (part.name || "").toLowerCase();
+      const price = String(part.price || 0).toLowerCase();
+      return name.includes(searchTerm) || price.includes(searchTerm);
+    });
+  };
+
+  const handlePartSearchFocus = () => {
+    setActivePartDropdown(true);
+    setPartSearchTerm("");
+  };
+
+  const handlePartSearchBlur = () => {
+    // Delay close slightly so list-item click can be captured first.
+    setTimeout(() => {
+      setActivePartDropdown(false);
+      if (selectedPartId) {
+        const selectedPart = getAvailableParts().find((p) => p._id === selectedPartId);
+        setPartSearchTerm(selectedPart?.name || "");
+      }
+    }, 120);
+  };
+
+  const handlePartSelect = (part) => {
+    setSelectedPartId(part._id);
+    setPartSearchTerm(part.name || "");
+    setActivePartDropdown(false);
   };
 
   const getPartLineTotal = (part) => {
@@ -377,35 +548,143 @@ export function ServiceOrderPage() {
   };
 
   // External Parts handlers
-  const handleAddExternalPart = (name, price, quantity, discountPercent) => {
+  const normalizeExternalMaterialName = (name = "") =>
+    name.trim().toLowerCase();
+
+  const getFilteredExternalMaterials = () => {
+    const searchTerm = normalizeExternalMaterialName(externalPartForm.name || "");
+    const items = Array.isArray(externalMaterials) ? externalMaterials : [];
+
+    if (!searchTerm) {
+      return items.slice(0, 8);
+    }
+
+    return items
+      .filter((item) => {
+        const itemName = normalizeExternalMaterialName(item?.name || "");
+        return itemName.includes(searchTerm);
+      })
+      .slice(0, 8);
+  };
+
+  const handleExternalPartInputChange = (field, value) => {
+    setExternalPartForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleExternalPartSuggestionSelect = (material) => {
+    if (!material) return;
+
+    setExternalPartForm((prev) => ({
+      ...prev,
+      name: material.name || "",
+      price:
+        prev.price.trim() === ""
+          ? String(parseFloat(material.price) || 0)
+          : prev.price,
+    }));
+    setShowExternalPartSuggestions(false);
+  };
+
+  const resetExternalPartForm = () => {
+    setExternalPartForm({
+      name: "",
+      price: "",
+      quantity: "1",
+      discountPercent: "0",
+    });
+  };
+
+  const handleAddExternalPart = async (name, price, quantity, discountPercent) => {
     if (!name.trim()) {
       toast.warning("Please enter a material/part name");
       return;
     }
 
-    const parsedPrice = parseFloat(price) || 0;
+    const rawPrice = String(price ?? "").trim();
+    const hasPriceInput = rawPrice !== "";
+    const parsedPrice = hasPriceInput ? parseFloat(rawPrice) || 0 : 0;
     const parsedQuantity = parseInt(quantity, 10) || 1;
     const parsedDiscount = Math.max(0, parseFloat(discountPercent) || 0);
+    const trimmedName = name.trim();
+    const normalizedName = normalizeExternalMaterialName(trimmedName);
 
     if (parsedPrice < 0) {
       toast.warning("Price cannot be negative");
       return;
     }
 
+    let resolvedMaterial = (externalMaterials || []).find(
+      (material) =>
+        normalizeExternalMaterialName(material?.name || "") === normalizedName,
+    );
+
+    if (!resolvedMaterial) {
+      try {
+        const createdMaterialResponse = await dispatch(
+          createExternalMaterial({
+            name: trimmedName,
+            price: parsedPrice,
+          }),
+        ).unwrap();
+
+        resolvedMaterial =
+          createdMaterialResponse?.externalMaterial ||
+          createdMaterialResponse?.data ||
+          createdMaterialResponse;
+
+        dispatch(getAllExternalMaterials());
+      } catch (error) {
+        toast.error("Failed to save external material");
+        return;
+      }
+    }
+
+    const resolvedPrice = hasPriceInput
+      ? parsedPrice
+      : parseFloat(resolvedMaterial?.price) || 0;
+
     const updatedRepairs = [...repairs];
     if (!updatedRepairs[currentRepairIndex].externalParts) {
       updatedRepairs[currentRepairIndex].externalParts = [];
     }
 
-    updatedRepairs[currentRepairIndex].externalParts.push({
-      id: Date.now() + Math.random(),
-      name: name.trim(),
-      price: parsedPrice,
-      quantity: parsedQuantity,
-      source: "external", // Mark as external
-    });
+    const existingLocalPartIndex = updatedRepairs[
+      currentRepairIndex
+    ].externalParts.findIndex(
+      (part) =>
+        normalizeExternalMaterialName(part?.name || "") === normalizedName,
+    );
+
+    if (existingLocalPartIndex >= 0) {
+      updatedRepairs[currentRepairIndex].externalParts[existingLocalPartIndex] = {
+        ...updatedRepairs[currentRepairIndex].externalParts[existingLocalPartIndex],
+        quantity:
+          (parseInt(
+            updatedRepairs[currentRepairIndex].externalParts[existingLocalPartIndex]
+              .quantity,
+            10,
+          ) || 0) + parsedQuantity,
+        price: resolvedPrice,
+        discountPercent: parsedDiscount,
+      };
+    } else {
+      updatedRepairs[currentRepairIndex].externalParts.push({
+        id: Date.now() + Math.random(),
+        externalMaterialId: resolvedMaterial?._id,
+        name: resolvedMaterial?.name || trimmedName,
+        price: resolvedPrice,
+        quantity: parsedQuantity,
+        discountPercent: parsedDiscount,
+        source: "external", // Mark as external
+      });
+    }
 
     setRepairs(updatedRepairs);
+    resetExternalPartForm();
+    setShowExternalPartSuggestions(false);
     toast.success("External material added to repair");
   };
 
@@ -434,7 +713,8 @@ export function ServiceOrderPage() {
   const getExternalPartLineTotal = (part) => {
     const price = parseFloat(part?.price) || 0;
     const quantity = parseInt(part?.quantity, 10) || 0;
-    const discountedAmount = price * quantity;
+    const discountPercent = parseFloat(part?.discountPercent) || 0;
+    const discountedAmount = price * quantity * (1 - Math.max(0, discountPercent) / 100);
     return discountedAmount;
   };
 
@@ -507,6 +787,50 @@ export function ServiceOrderPage() {
       serviceTypeEntries: entries.length > 0 ? entries : [createServiceTypeEntry()],
     });
     setRepairs(updatedRepairs);
+  };
+
+  const getServiceTypeDisplayLabel = (entry) => {
+    if (showNewServiceTypeForm && activeServiceTypeEntryId === entry.id) {
+      return "Other (Add New)";
+    }
+    const selectedServiceType = serviceTypes.find(
+      (st) => st._id === entry.serviceTypeId,
+    );
+    if (!selectedServiceType) return "";
+    return `${selectedServiceType.name} - Rs. ${(selectedServiceType.price || 0).toFixed(2)}`;
+  };
+
+  const getFilteredServiceTypes = (entryId) => {
+    const searchTerm = (serviceTypeSearchByEntry[entryId] || "").trim().toLowerCase();
+    if (!searchTerm) return serviceTypes || [];
+
+    return (serviceTypes || []).filter((st) => {
+      const name = (st.name || "").toLowerCase();
+      const price = String(st.price || 0).toLowerCase();
+      return name.includes(searchTerm) || price.includes(searchTerm);
+    });
+  };
+
+  const handleServiceTypeSearchFocus = (entry) => {
+    setActiveServiceTypeDropdownId(entry.id);
+    setServiceTypeSearchByEntry((prev) => ({
+      ...prev,
+      [entry.id]: "",
+    }));
+  };
+
+  const handleServiceTypeSearchBlur = () => {
+    // Delay close slightly so list-item click can be captured first.
+    setTimeout(() => {
+      setActiveServiceTypeDropdownId(null);
+      setServiceTypeSearchByEntry({});
+    }, 120);
+  };
+
+  const handleServiceTypeSearchSelect = (entryId, serviceTypeId) => {
+    handleServiceTypeEntryChange(entryId, serviceTypeId);
+    setActiveServiceTypeDropdownId(null);
+    setServiceTypeSearchByEntry({});
   };
 
   const handleServiceTypeEntryDescriptionChange = (entryId, description) => {
@@ -624,6 +948,7 @@ export function ServiceOrderPage() {
     const newRepair = buildRepairWithServiceTypeEntries({
       id: Date.now(),
       vehicleNumber: "",
+      currentMileage: "",
       employeeId: "",
       serviceTypeId: "",
       servicePrice: 0,
@@ -833,6 +1158,11 @@ export function ServiceOrderPage() {
     );
   };
 
+  const hasValidCurrentMileage =
+    currentRepair.currentMileage !== "" &&
+    Number.isFinite(Number(currentRepair.currentMileage)) &&
+    Number(currentRepair.currentMileage) >= 0;
+
   const handleSaveDraft = () => {
     // Validate at least one repair
     if (repairs.length === 0 || !currentRepair.vehicleNumber) {
@@ -862,10 +1192,28 @@ export function ServiceOrderPage() {
     toast.success("Service order draft saved successfully");
   };
 
+  const handleClearWorkingState = () => {
+    localStorage.removeItem(WORKING_SERVICE_ORDER_STORAGE_KEY);
+    setRepairs([]);
+    setCurrentRepairIndex(0);
+    generateInvoiceNumber();
+    toast.success("Working service order data cleared");
+  };
+
   const handleCreateServiceOrder = async () => {
     // Validate only the current repair
     if (!currentRepair.vehicleNumber || !currentRepair.employeeId) {
       toast.error("Please assign both vehicle and employee to this repair");
+      return;
+    }
+
+    const parsedCurrentMileage = parseFloat(currentRepair.currentMileage);
+    if (
+      currentRepair.currentMileage === "" ||
+      Number.isNaN(parsedCurrentMileage) ||
+      parsedCurrentMileage < 0
+    ) {
+      toast.error("Please enter the current mileage before completing the repair");
       return;
     }
 
@@ -904,6 +1252,7 @@ export function ServiceOrderPage() {
     const orderData = {
       appointmentId: currentVehicle?.appointmentId,
       vehicleNumber: currentRepair.vehicleNumber,
+      currentMileage: parsedCurrentMileage,
       customerId: currentVehicle?.customerId,
       employeeId: currentRepair.employeeId,
       serviceDescription: combinedServiceDescription,
@@ -951,6 +1300,7 @@ export function ServiceOrderPage() {
       const enrichedServiceOrder = {
         ...result,
         vehicleNumber: currentRepair.vehicleNumber,
+        currentMileage: parsedCurrentMileage,
         customerId: currentVehicle?.customerId ? {
           name: currentVehicle?.customerName || "Unknown Customer",
           contactNumber: currentVehicle?.contactNumber || "N/A",
@@ -993,6 +1343,7 @@ export function ServiceOrderPage() {
       } else {
         // No more repairs, clear everything
         localStorage.removeItem("serviceOrderDraft");
+        localStorage.removeItem(WORKING_SERVICE_ORDER_STORAGE_KEY);
         initializeNewRepair();
       }
     } catch (error) {
@@ -1283,25 +1634,65 @@ export function ServiceOrderPage() {
                             </button>
                           )}
                         </div>
-                        <select
-                          className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          value={showNewServiceTypeForm && activeServiceTypeEntryId === entry.id ? "__other__" : (entry.serviceTypeId || "")}
-                          onChange={(e) => handleServiceTypeEntryChange(entry.id, e.target.value)}
-                        >
-                          <option value="">-- Select Service Type --</option>
-                          {serviceTypes && serviceTypes.length > 0 ? (
-                            serviceTypes.map((st) => (
-                              <option key={st._id} value={st._id}>
-                                {st.name} - Rs. {(st.price || 0).toFixed(2)}
-                              </option>
-                            ))
-                          ) : (
-                            <option value="" disabled>
-                              No service types available
-                            </option>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            placeholder="Search or select service type"
+                            value={
+                              activeServiceTypeDropdownId === entry.id
+                                ? serviceTypeSearchByEntry[entry.id] || ""
+                                : getServiceTypeDisplayLabel(entry)
+                            }
+                            onFocus={() => handleServiceTypeSearchFocus(entry)}
+                            onBlur={handleServiceTypeSearchBlur}
+                            onChange={(e) => {
+                              setActiveServiceTypeDropdownId(entry.id);
+                              setServiceTypeSearchByEntry((prev) => ({
+                                ...prev,
+                                [entry.id]: e.target.value,
+                              }));
+                            }}
+                          />
+
+                          {activeServiceTypeDropdownId === entry.id && (
+                            <div className="absolute z-30 mt-1 max-h-52 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+                              <button
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => handleServiceTypeSearchSelect(entry.id, "")}
+                                className="block w-full px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-100"
+                              >
+                                -- Select Service Type --
+                              </button>
+
+                              {getFilteredServiceTypes(entry.id).length > 0 ? (
+                                getFilteredServiceTypes(entry.id).map((st) => (
+                                  <button
+                                    key={st._id}
+                                    type="button"
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => handleServiceTypeSearchSelect(entry.id, st._id)}
+                                    className="block w-full px-3 py-2 text-left text-xs text-gray-900 hover:bg-blue-50"
+                                  >
+                                    {st.name} - Rs. {(st.price || 0).toFixed(2)}
+                                  </button>
+                                ))
+                              ) : (
+                                <div className="px-3 py-2 text-xs text-gray-500">No service types found</div>
+                              )}
+
+                              <button
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => handleServiceTypeSearchSelect(entry.id, "__other__")}
+                                className="block w-full border-t border-gray-200 px-3 py-2 text-left text-xs font-medium text-blue-700 hover:bg-blue-50"
+                              >
+                                Other (Add New)
+                              </button>
+                            </div>
                           )}
-                          <option value="__other__">Other (Add New)</option>
-                        </select>
+                        </div>
                         <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
                           <div>
                             <label className="mb-1 block text-xs font-medium text-gray-600">
@@ -1406,6 +1797,24 @@ export function ServiceOrderPage() {
                     <option value="card">Card</option>
                     <option value="bank-transfer">Bank Transfer</option>
                   </select>
+                </div>
+
+                {/* Current Mileage */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-gray-700">
+                    Current Mileage (km)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    value={currentRepair.currentMileage ?? ""}
+                    onChange={(e) =>
+                      handleUpdateRepairField("currentMileage", e.target.value)
+                    }
+                    placeholder="Enter vehicle mileage"
+                  />
                 </div>
 
                 {/* Other Charges Selection */}
@@ -1525,18 +1934,42 @@ export function ServiceOrderPage() {
                   <label className="mb-1.5 block text-xs font-medium text-gray-700">
                     Add Part
                   </label>
-                  <select
-                    id="partSelect"
-                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    disabled={isLoadingProducts}
-                  >
-                    <option value="">-- Select Part --</option>
-                    {getAvailableParts().map((p) => (
-                      <option key={p._id} value={p._id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      placeholder="Search part"
+                      value={partSearchTerm}
+                      onFocus={handlePartSearchFocus}
+                      onBlur={handlePartSearchBlur}
+                      onChange={(e) => {
+                        setPartSearchTerm(e.target.value);
+                        setSelectedPartId("");
+                        setActivePartDropdown(true);
+                      }}
+                      disabled={isLoadingProducts}
+                    />
+
+                    {activePartDropdown && !isLoadingProducts && (
+                      <div className="absolute z-30 mt-1 max-h-52 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+                        {getFilteredParts().length > 0 ? (
+                          getFilteredParts().map((part) => (
+                            <button
+                              key={part._id}
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => handlePartSelect(part)}
+                              className="block w-full px-3 py-2 text-left text-xs text-gray-900 hover:bg-blue-50"
+                            >
+                              {part.name}
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-3 py-2 text-xs text-gray-500">No parts found</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="w-24">
                   <label className="mb-1.5 block text-xs font-medium text-gray-700">
@@ -1566,11 +1999,12 @@ export function ServiceOrderPage() {
                 </div>
                 <Button
                   onClick={() => {
-                    const partId = document.getElementById("partSelect").value;
+                    const partId = selectedPartId;
                     const qty = document.getElementById("partQty").value;
                     const discount = document.getElementById("partDiscount").value;
                     handleAddPart(partId, qty, discount);
-                    document.getElementById("partSelect").value = "";
+                    setSelectedPartId("");
+                    setPartSearchTerm("");
                     document.getElementById("partQty").value = "1";
                     document.getElementById("partDiscount").value = "0";
                   }}
@@ -1660,16 +2094,45 @@ export function ServiceOrderPage() {
             <div className="space-y-4">
               {/* Add External Materials Form */}
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-                <div className="flex-1">
+                <div className="relative flex-1">
                   <label className="mb-1.5 block text-xs font-medium text-gray-700">
                     Material/Part Name
                   </label>
                   <input
                     type="text"
-                    id="externalPartName"
                     placeholder="e.g., Windshield, Seat Cover, Brake Pads..."
+                    value={externalPartForm.name}
+                    onFocus={() => setShowExternalPartSuggestions(true)}
+                    onBlur={() => {
+                      setTimeout(() => {
+                        setShowExternalPartSuggestions(false);
+                      }, 120);
+                    }}
+                    onChange={(e) => {
+                      handleExternalPartInputChange("name", e.target.value);
+                      setShowExternalPartSuggestions(true);
+                    }}
                     className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
+                  {showExternalPartSuggestions &&
+                    getFilteredExternalMaterials().length > 0 && (
+                      <div className="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+                        {getFilteredExternalMaterials().map((material) => (
+                          <button
+                            key={material._id || material.name}
+                            type="button"
+                            onMouseDown={() =>
+                              handleExternalPartSuggestionSelect(material)
+                            }
+                            className="flex w-full items-center justify-between px-3 py-2 text-left text-xs hover:bg-gray-50"
+                          >
+                            <span className="font-medium text-gray-900">
+                              {material.name}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                 </div>
                 <div className="w-24">
                   <label className="mb-1.5 block text-xs font-medium text-gray-700">
@@ -1677,10 +2140,12 @@ export function ServiceOrderPage() {
                   </label>
                   <input
                     type="number"
-                    id="externalPartPrice"
                     min="0"
                     step="0.01"
-                    defaultValue="0"
+                    value={externalPartForm.price}
+                    onChange={(e) =>
+                      handleExternalPartInputChange("price", e.target.value)
+                    }
                     className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
@@ -1690,22 +2155,24 @@ export function ServiceOrderPage() {
                   </label>
                   <input
                     type="number"
-                    id="externalPartQty"
                     min="1"
-                    defaultValue="1"
+                    value={externalPartForm.quantity}
+                    onChange={(e) =>
+                      handleExternalPartInputChange("quantity", e.target.value)
+                    }
                     className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
                 <Button
-                  onClick={() => {
-                    const name = document.getElementById("externalPartName").value;
-                    const price = document.getElementById("externalPartPrice").value;
-                    const qty = document.getElementById("externalPartQty").value;
-                    handleAddExternalPart(name, price, qty);
-                    document.getElementById("externalPartName").value = "";
-                    document.getElementById("externalPartPrice").value = "0";
-                    document.getElementById("externalPartQty").value = "1";
-                  }}
+                  disabled={isExternalMaterialsLoading}
+                  onClick={() =>
+                    handleAddExternalPart(
+                      externalPartForm.name,
+                      externalPartForm.price,
+                      externalPartForm.quantity,
+                      externalPartForm.discountPercent,
+                    )
+                  }
                 >
                   <Plus className="h-4 w-4 mr-2" /> Add
                 </Button>
@@ -1833,6 +2300,14 @@ export function ServiceOrderPage() {
                     </span>
                   </div>
                 )}
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Current Mileage:</span>
+                  <span className="font-medium">
+                    {hasValidCurrentMileage
+                      ? `${Number(currentRepair.currentMileage).toLocaleString("en-PK")} km`
+                      : "Not entered"}
+                  </span>
+                </div>
               </div>
 
               <div className="border-t border-gray-100 pt-4 space-y-3">
@@ -2000,7 +2475,7 @@ export function ServiceOrderPage() {
               </div> */}
 
               <div className="space-y-3">
-                {currentRepair.employeeId ? (
+                {currentRepair.employeeId && hasValidCurrentMileage ? (
                   <Button
                     className="w-full"
                     onClick={handleCreateServiceOrder}
@@ -2019,9 +2494,9 @@ export function ServiceOrderPage() {
                       Complete Repair
                     </Button>
                     <p className="text-xs text-gray-500 mt-2 text-center">
-                      {!currentRepair.parts || currentRepair.parts.length === 0 
-                        ? "Add Parts & Materials to complete this repair"
-                        : "Assign an employee to complete this repair"}
+                      {!currentRepair.employeeId
+                        ? "Assign an employee to complete this repair"
+                        : "Enter current mileage to complete this repair"}
                     </p>
                   </div>
                 )}
@@ -2032,6 +2507,14 @@ export function ServiceOrderPage() {
                   leftIcon={<Save className="h-4 w-4" />}
                 >
                   Save All as Draft
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="w-full text-red-600 hover:text-red-800"
+                  onClick={handleClearWorkingState}
+                  leftIcon={<Trash2 className="h-4 w-4" />}
+                >
+                  Clear Working Data
                 </Button>
               </div>
             </div>

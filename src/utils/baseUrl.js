@@ -73,5 +73,9 @@ export const API_PATH = {
     GET_ALL: "/api/other-charge/all",
     UPDATE: (id) => `/api/other-charge/update/${id}`,
     DELETE: (id) => `/api/other-charge/delete/${id}`,
-  }
+  },
+  EXTERNAL_MATERIALS: {
+    CREATE: "/api/external-material/create",
+    GET_ALL: "/api/external-material/all",
+  },
 };

@@ -34,6 +34,15 @@ const formatTime = (dateString) => {
   });
 };
 
+const formatMileage = (mileage) => {
+  const parsedMileage = Number(mileage);
+  if (!Number.isFinite(parsedMileage) || parsedMileage < 0) {
+    return "N/A";
+  }
+
+  return `${new Intl.NumberFormat("en-PK").format(parsedMileage)} km`;
+};
+
 // Calculate 3% fee with parts and labor cost included in subtotal
 const getRepairSubtotal = (repair) => {
     if (!repair) return 0;
@@ -572,6 +581,10 @@ const generateServiceHistoryHTML = (serviceOrder) => {
         <div class="status">
           <b style="font-size:11px;">Payment Method</b>
           <div style="font-size:11px; margin-top:3px; font-weight:500; color:#666;">${serviceOrder.paymentType ? (serviceOrder.paymentType === "bank-transfer" ? "Bank Transfer" : serviceOrder.paymentType.charAt(0).toUpperCase() + serviceOrder.paymentType.slice(1)) : "N/A"}</div>
+        </div>
+        <div class="status">
+          <b style="font-size:11px;">Current Mileage</b>
+          <div style="font-size:11px; margin-top:3px; font-weight:500; color:#666;">${formatMileage(serviceOrder.currentMileage)}</div>
         </div>
       </div>
     </div>
