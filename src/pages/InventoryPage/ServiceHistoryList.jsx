@@ -10,6 +10,8 @@ import {
   X,
   Download,
   Printer,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -68,6 +70,8 @@ export function ServiceHistoryList() {
   const [filteredData, setFilteredData] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const recordsPerPage = 10;
 
   useEffect(() => {
     handleLoadAllServiceOrders();
@@ -82,6 +86,7 @@ export function ServiceHistoryList() {
         item.serviceDescription?.toLowerCase().includes(searchTerm.toLowerCase()),
     );
     setFilteredData(filtered);
+    setCurrentPage(1);
   }, [serviceOrders, searchTerm]);
 
   const handleLoadAllServiceOrders = async () => {
@@ -101,6 +106,13 @@ export function ServiceHistoryList() {
     setShowInvoiceModal(false);
     setSelectedOrder(null);
   };
+
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / recordsPerPage));
+  const firstRecordIndex = (currentPage - 1) * recordsPerPage;
+  const paginatedData = filteredData.slice(
+    firstRecordIndex,
+    firstRecordIndex + recordsPerPage,
+  );
 
   /**
    * Get status badge component based on service order status
@@ -204,7 +216,7 @@ export function ServiceHistoryList() {
                   </td>
                 </tr>
               ) : filteredData.length > 0 ? (
-                filteredData.map((order) => (
+                paginatedData.map((order) => (
                   <tr
                     key={order._id}
                     className="group transition-colors hover:bg-gray-50/50"
@@ -322,14 +334,26 @@ export function ServiceHistoryList() {
         {/* Pagination Section */}
         <div className="flex flex-col items-center justify-between gap-4 border-t border-gray-100 px-6 py-4 sm:flex-row">
           <p className="text-xs text-gray-500">
-            Showing <span className="font-medium">{filteredData.length}</span>{" "}
+            Showing <span className="font-medium">{filteredData.length === 0 ? 0 : firstRecordIndex + 1}-{Math.min(firstRecordIndex + recordsPerPage, filteredData.length)}</span>{" "}
             of <span className="font-medium">{serviceOrders.length}</span> results
           </p>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled>
+            <Button
+              variant="outline"
+              size="sm"
+              leftIcon={<ChevronLeft className="h-3.5 w-3.5" />}
+              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+              disabled={currentPage === 1}
+            >
               Previous
             </Button>
-            <Button variant="outline" size="sm">
+            <Button
+              variant="outline"
+              size="sm"
+              rightIcon={<ChevronRight className="h-3.5 w-3.5" />}
+              onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+              disabled={currentPage === totalPages || filteredData.length === 0}
+            >
               Next
             </Button>
           </div>

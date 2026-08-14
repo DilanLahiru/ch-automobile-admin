@@ -1,6 +1,6 @@
 // Define the base URL for the API
 export const baseUrl = "https://api.chautomobile.lk";
-//export const baseUrl = "http://192.168.8.100:3000";
+//export const baseUrl = "http://192.168.8.101:3000";
 
 export const API_PATH = {
   AUTH: {
@@ -20,8 +20,8 @@ export const API_PATH = {
   CUSTOMER: {
     GET_ALL: "/api/customer/all",
     CREATE: "/api/customer/register",
-    UPDATE: "/api/customer/update",
-    DELETE: "/api/customer/delete",
+    UPDATE: (id) => `/api/customer/update/${id}`,
+    DELETE: (id) => `/api/customer/delete/${id}`,
   },
   PRODUCT: {
     GET_ALL: "/api/product/all",

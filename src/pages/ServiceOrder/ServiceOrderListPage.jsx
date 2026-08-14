@@ -8,6 +8,8 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
+  ChevronLeft,
+  ChevronRight,
   Search,
 } from 'lucide-react'
 import { Card } from '../../components/ui/Card'
@@ -25,6 +27,8 @@ export function ServiceOrderListPage() {
   const [filteredOrders, setFilteredOrders] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
+  const [currentPage, setCurrentPage] = useState(1)
+  const ordersPerPage = 10
 
   // Mock vehicle data
   const mockVehicles = [
@@ -40,6 +44,10 @@ export function ServiceOrderListPage() {
   useEffect(() => {
     filterOrders()
   }, [serviceOrders, searchTerm, filterStatus])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, filterStatus])
 
   const loadServiceOrders = async () => {
     dispatch(getAllServiceOrders())
@@ -88,6 +96,13 @@ export function ServiceOrderListPage() {
   const getStatusBadgeVariant = (status) => {
     return status === 'completed' ? 'success' : 'warning'
   }
+
+  const totalPages = Math.ceil(filteredOrders.length / ordersPerPage)
+  const firstOrderIndex = (currentPage - 1) * ordersPerPage
+  const paginatedOrders = filteredOrders.slice(
+    firstOrderIndex,
+    firstOrderIndex + ordersPerPage
+  )
 
   const handleDeleteOrder = async (orderId) => {
     if (window.confirm('Are you sure you want to delete this service order?')) {
@@ -169,7 +184,7 @@ export function ServiceOrderListPage() {
         </Card>
       ) : filteredOrders.length > 0 ? (
         <div className="space-y-4">
-          {filteredOrders.map((order) => {
+          {paginatedOrders.map((order) => {
             const allRepairsCompleted = order.repairs?.every((r) => r.status === 'completed')
             const repairStatus = allRepairsCompleted ? 'completed' : 'pending'
             const firstRepair = order.repairs?.[0]
@@ -267,6 +282,36 @@ export function ServiceOrderListPage() {
               </Card>
             )
           })}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-2">
+              <p className="text-sm text-gray-600">
+                Showing {firstOrderIndex + 1}-{Math.min(firstOrderIndex + ordersPerPage, filteredOrders.length)} of {filteredOrders.length} orders
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((page) => page - 1)}
+                  disabled={currentPage === 1}
+                  className="flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </button>
+                <span className="text-sm text-gray-600">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((page) => page + 1)}
+                  disabled={currentPage === totalPages}
+                  className="flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <Card>

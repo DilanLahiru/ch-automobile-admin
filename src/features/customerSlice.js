@@ -13,7 +13,6 @@ export const getAllCustomers = createAsyncThunk(
           "Content-Type": "application/json",
         },
       });
-      console.log(response.data);
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to fetch customer data");
@@ -43,7 +42,7 @@ export const updateCustomer = createAsyncThunk(
   "customer/update",
   async (customerData, { rejectWithValue }) => {
     try {
-      const response = await axios.put(`${baseUrl}${API_PATH.CUSTOMER.UPDATE}`, customerData, {
+      const response = await axios.put(`${baseUrl}${API_PATH.CUSTOMER.UPDATE(customerData._id)}`, customerData, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -61,7 +60,7 @@ export const deleteCustomer = createAsyncThunk(
   "customer/delete",
   async (customerId, { rejectWithValue }) => {
     try {
-      const response = await axios.delete(`${baseUrl}${API_PATH.CUSTOMER.DELETE}/${customerId}`, {
+      const response = await axios.delete(`${baseUrl}${API_PATH.CUSTOMER.DELETE(customerId)}`, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -122,8 +121,8 @@ const customerSlice = createSlice({
       .addCase(updateCustomer.fulfilled, (state, action) => {
         state.loading = false;
         state.customers = state.customers.map((customer) => {
-          if (customer._id === action.payload._id) {
-            return action.payload;
+          if (customer._id === action.meta.arg._id) {
+            return { ...customer, ...action.meta.arg, ...action.payload };
           } else {
             return customer;
           }
@@ -141,7 +140,7 @@ const customerSlice = createSlice({
       })
       .addCase(deleteCustomer.fulfilled, (state, action) => {
         state.loading = false;
-        state.customers = state.customers.filter((customer) => customer._id !== action.payload._id);
+        state.customers = state.customers.filter((customer) => customer._id !== action.meta.arg);
       })
       .addCase(deleteCustomer.rejected, (state, action) => {
         state.loading = false;
