@@ -834,7 +834,7 @@ export function OverviewPage() {
             {lowStockItems.length === 0 && (
               <div className="text-center mt-52">
                 <CheckCircle className="w-10 h-10 text-green-400 mx-auto mb-4" />
-                <h4 className="text-sm font-semibold text-gray-600 font-sans uppercase">All items are sufficiently stocked</h4>
+                <h4 className="text-xs font-semibold text-gray-600 font-sans uppercase">All items are sufficiently stocked</h4>
               </div>
             )} 
             <>
@@ -855,12 +855,12 @@ export function OverviewPage() {
                       ></div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <h4 className="font-semibold text-gray-900">
+                          <h4 className="font-semibold text-xs text-gray-900">
                             {item.partName}
                           </h4>
-                          <Badge variant="secondary" size="sm">
+                          {/* <Badge variant="secondary" size="sm">
                             {item.category}
-                          </Badge>
+                          </Badge> */}
                         </div>
                         <p className="text-xs text-gray-500 font-sans mt-1">
                           {item.supplier}
@@ -915,10 +915,10 @@ export function OverviewPage() {
         <Card className="p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-base font-semibold text-gray-900">
                 Top Customers
               </h3>
-              <p className="text-sm text-gray-500">
+              <p className="text-xs text-gray-500">
                 Your most valuable clients from appointments
               </p>
             </div>
@@ -946,7 +946,7 @@ export function OverviewPage() {
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <h4 className="font-semibold text-gray-900">
+                          <h4 className="font-semibold text-xs text-gray-900">
                             {customer.name || "Unknown Customer"}
                           </h4>
                           <Badge
@@ -966,7 +966,7 @@ export function OverviewPage() {
                                 : "New"}
                           </Badge>
                         </div>
-                        <p className="text-sm text-gray-500 mt-1">
+                        <p className="text-xs text-gray-500 mt-1">
                           {customer.phone || "No contact"}
                         </p>
                       </div>
@@ -975,17 +975,17 @@ export function OverviewPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-4 mt-4">
                     <div className="text-center p-3 bg-gray-50 rounded-lg">
-                      <p className="text-sm text-gray-600">
+                      <p className="text-xs text-gray-600">
                         Total Appointments
                       </p>
-                      <p className="text-xl font-bold text-gray-900 mt-1">
+                      <p className="text-lg font-bold text-gray-900 mt-1">
                         {customer.totalAppointments}
                       </p>
                     </div>
                     <div className="text-center p-3 bg-gray-50 rounded-lg">
-                      <p className="text-sm text-gray-600">Status</p>
-                      <p className="text-xl font-bold text-gray-900 mt-1">
-                        <span className="text-sm text-emerald-600 font-medium">
+                      <p className="text-xs text-gray-600">Status</p>
+                      <p className="text-lg font-bold text-gray-900 mt-1">
+                        <span className="text-xs text-emerald-600 font-medium">
                           Active
                         </span>
                       </p>

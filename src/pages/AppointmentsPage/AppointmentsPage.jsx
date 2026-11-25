@@ -739,7 +739,7 @@ export function AppointmentsPage() {
                     <input
                       type="text"
                       placeholder="Search customers by name"
-                      className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-slate-900 placeholder-slate-400 text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      className="w-full pl-10 pr-4 py-2.5 border text-xs border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-slate-900 placeholder-slate-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
                       value={customerSearch}
                       onChange={(e) => setCustomerSearch(e.target.value)}
                       disabled={!!editingAppointment}
@@ -769,7 +769,7 @@ export function AppointmentsPage() {
                         >
                           <div className="flex items-center justify-between">
                             <div>
-                              <p className="font-medium text-sm text-slate-900 pb-1">{customer.name}</p>
+                              <p className="font-semibold text-xs text-slate-900 pb-1">{customer.name}</p>
                               <p className="text-xs text-slate-600">
                                 {customer.contactNumber}
                                 {customer.email && ` • ✉️ ${customer.email}`}
@@ -791,7 +791,7 @@ export function AppointmentsPage() {
                       variant="outline"
                       leftIcon={<Plus className="h-4 w-4" />}
                       onClick={() => setShowCustomerModal(true)}
-                      className="w-full hover:bg-blue-50 hover:border-blue-300"
+                      className="w-full hover:bg-blue-50 hover:border-blue-300 text-xs"
                       disabled={!!editingAppointment}
                     >
                       Register New Customer
@@ -846,7 +846,7 @@ export function AppointmentsPage() {
                     <input
                       type="text"
                       placeholder="Vehicle Number *"
-                      className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-slate-900 placeholder-slate-400 text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      className="w-full pl-10 pr-4 py-2.5 border text-xs border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-slate-900 placeholder-slate-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
                       value={appointmentForm.vehicleNumber}
                       onChange={(e) => setAppointmentForm({ ...appointmentForm, vehicleNumber: e.target.value })}
                       disabled={!!editingAppointment}
@@ -858,7 +858,7 @@ export function AppointmentsPage() {
                     <input
                       type="text"
                       placeholder="Vehicle Model *"
-                      className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-slate-900 placeholder-slate-400 text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-slate-900 placeholder-slate-400 text-xs disabled:bg-gray-100 disabled:cursor-not-allowed"
                       value={appointmentForm.vehicleModel}
                       onChange={(e) => setAppointmentForm({ ...appointmentForm, vehicleModel: e.target.value })}
                       disabled={!!editingAppointment}
@@ -891,7 +891,7 @@ export function AppointmentsPage() {
                   <input
                     type="text"
                     placeholder="Search service types..."
-                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-slate-900 placeholder-slate-400 text-sm"
+                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-slate-900 placeholder-slate-400 text-xs"
                     value={serviceTypeSearch}
                     onChange={(e) => setServiceTypeSearch(e.target.value)}
                     disabled={!!editingAppointment}
@@ -911,13 +911,13 @@ export function AppointmentsPage() {
                               setServiceTypeSearch('');
                             }}
                             disabled={!!editingAppointment}
-                            className="w-full text-left px-4 py-2 hover:bg-blue-50 text-slate-900 text-sm border-b border-slate-100 last:border-b-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full text-left px-4 py-2 hover:bg-blue-50 text-slate-900 text-xs font-medium border-b border-slate-100 last:border-b-0 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {serviceType.name}
                           </button>
                         ))}
                       {serviceTypesFromRedux.filter(st => st.name.toLowerCase().includes(serviceTypeSearch.toLowerCase())).length === 0 && (
-                        <div className="px-4 py-2 text-slate-500 text-sm">No service types found</div>
+                        <div className="px-4 py-2 text-slate-500 text-xs">No service types found</div>
                       )}
                     </div>
                   )}
@@ -925,7 +925,7 @@ export function AppointmentsPage() {
 
                 {/* Selected Service Type Display */}
                 {appointmentForm.serviceType && (
-                  <div className="mt-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+                  <div className="mt-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs font-medium text-blue-700">
                     Selected: {serviceTypesFromRedux.find(st => st._id === appointmentForm.serviceType)?.name || 'Unknown'}
                   </div>
                 )}
@@ -939,7 +939,7 @@ export function AppointmentsPage() {
                 </label>
                 <textarea
                   placeholder="Any special instructions, concerns, or customer requests..."
-                  className="w-full px-4 py-3 border text-sm border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-slate-900 placeholder-slate-400 min-h-[100px] resize-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className="w-full px-4 py-3 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-slate-900 placeholder-slate-400 min-h-[100px] resize-none disabled:bg-gray-100 disabled:cursor-not-allowed"
                   value={appointmentForm.notes}
                   onChange={(e) => setAppointmentForm({ ...appointmentForm, notes: e.target.value })}
                   disabled={!!editingAppointment}
@@ -986,7 +986,7 @@ export function AppointmentsPage() {
           <Card className="w-full max-w-md">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-slate-900">Register New Customer</h3>
+                <h3 className="text-base font-semibold text-slate-900">Register New Customer</h3>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -1005,12 +1005,12 @@ export function AppointmentsPage() {
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1 text-slate-700">
+                  <label className="block text-xs font-medium mb-1 text-slate-700">
                     Full Name *
                   </label>
                   <input
                     type="text"
-                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-slate-900"
+                    className="w-full px-3 py-2.5 border text-xs border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-slate-900"
                     value={customerForm.name}
                     onChange={(e) => setCustomerForm({...customerForm, name: e.target.value})}
                     placeholder="Enter customer name"
@@ -1018,12 +1018,12 @@ export function AppointmentsPage() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1 text-slate-700">
+                  <label className="block text-xs font-medium mb-1 text-slate-700">
                     Contact Number *
                   </label>
                   <input
                     type="tel"
-                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-slate-900"
+                    className="w-full px-3 py-2.5 border text-xs border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-slate-900"
                     value={customerForm.contactNumber}
                     onChange={(e) => setCustomerForm({...customerForm, contactNumber: e.target.value})}
                     placeholder="Enter phone number"
@@ -1031,12 +1031,12 @@ export function AppointmentsPage() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-1 text-slate-700">
+                  <label className="block text-xs font-medium mb-1 text-slate-700">
                     Email Address
                   </label>
                   <input
                     type="email"
-                    className="w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-slate-900"
+                    className="w-full px-3 py-2.5 border text-xs border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-slate-900"
                     value={customerForm.email}
                     onChange={(e) => setCustomerForm({...customerForm, email: e.target.value})}
                     placeholder="Enter email address (optional)"
@@ -1046,7 +1046,7 @@ export function AppointmentsPage() {
                 <div className="flex gap-2 pt-4">
                   <Button
                     variant="outline"
-                    className="flex-1"
+                    className="flex-1 text-xs"
                     onClick={() => {
                       setShowCustomerModal(false)
                       setCustomerForm({
@@ -1060,7 +1060,7 @@ export function AppointmentsPage() {
                     Cancel
                   </Button>
                   <Button
-                    className="flex-1 bg-green-600 hover:bg-green-700"
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-xs"
                     onClick={handleRegisterCustomer}
                     disabled={!customerForm.name || !customerForm.contactNumber || customersLoading}
                   >

@@ -88,7 +88,7 @@ export function SupplierPage() {
                 setEditingSupplier(null);
                 setShowRegistration(true);
               }}
-              className="mt-4 md:mt-0 flex text-sm items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg"
+              className="mt-4 md:mt-0 flex text-xs items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg"
             >
               <Plus className="w-5 h-5" />
               Add Supplier
@@ -103,7 +103,7 @@ export function SupplierPage() {
               placeholder="Search by name or contact number..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-3 text-sm font-sans pl-11 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+              className="w-full px-4 py-3 text-xs font-sans pl-11 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
             />
           </div>
         </div>
@@ -225,7 +225,7 @@ export function SupplierPage() {
                             <Package className="w-5 h-5 text-blue-600" />
                           </div>
                           <div>
-                            <p className="font-medium text-gray-900 text-sm font-sans">
+                            <p className="font-medium text-gray-900 text-xs font-sans">
                               {supplier.name}
                             </p>
                           </div>
@@ -234,7 +234,7 @@ export function SupplierPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2 text-gray-700">
                           <Phone className="w-4 h-4 text-green-600" />
-                          <span className="text-sm font-sans">{supplier.contactNumber}</span>
+                          <span className="text-xs font-sans">{supplier.contactNumber}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

@@ -116,7 +116,7 @@ export function EmployeePage() {
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
                 Employee Management
               </h1>
-              <p className="text-gray-600">
+              <p className="text-gray-600 text-sm">
                 Register and manage your organization's employees
               </p>
             </div>
@@ -125,7 +125,7 @@ export function EmployeePage() {
                 setEditingEmployee(null);
                 setShowRegistration(true);
               }}
-              className="mt-4 md:mt-0 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center space-x-2"
+              className="mt-4 md:mt-0 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white text-xs font-semibold rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center space-x-2"
             >
               <UserPlus className="w-5 h-5" />
               <span>Register Employee</span>
@@ -204,7 +204,7 @@ export function EmployeePage() {
               placeholder="Search employees by name, email, or NIC..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+              className="w-full pl-12 pr-4 py-3 text-xs rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
             />
             <Search className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
           </div>
@@ -236,23 +236,23 @@ export function EmployeePage() {
                         <User className="h-5 w-5" />
                       </div>
                       <div>
-                        <p className="font-medium text-gray-700">{employee.name}</p>
+                        <p className="font-medium text-xs text-gray-700">{employee.name}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-gray-700">
+                  <td className="px-6 py-4 text-xs text-gray-700">
                     {employee.nicNumber}
                   </td>
-                  <td className="px-6 py-4 font-medium text-gray-700">
+                  <td className="px-6 py-4 text-xs font-medium text-gray-700">
                   {employee.contactNumber}
                   </td>
-                  <td className="px-6 py-4 font-medium text-gray-700">
+                  <td className="px-6 py-4 text-xs font-medium text-gray-700">
                     {employee.email}
                   </td>
-                  <td className="px-6 py-4 font-medium text-gray-700">
+                  <td className="px-6 py-4 text-xs font-medium text-gray-700">
                     {employee.address}
                   </td>
-                  <td className="px-6 py-4 font-medium text-gray-700">
+                  <td className="px-6 py-4 text-xs font-medium text-gray-700">
                     {employee.epfNumber}
                   </td>
                   <td className="px-6 py-4 text-right">
