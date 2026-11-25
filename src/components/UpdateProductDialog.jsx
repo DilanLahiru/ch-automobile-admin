@@ -19,6 +19,7 @@ export function UpdateProductDialog({ open, onClose, product, onUpdateProduct, o
   const { loading } = useSelector((state) => state.product);
   
   const [formData, setFormData] = useState({
+    name: '',
     quantity: '',
     price: '',
     initialStock: '',
@@ -31,6 +32,7 @@ export function UpdateProductDialog({ open, onClose, product, onUpdateProduct, o
   useEffect(() => {
     if (product) {
       setFormData({
+        name: product.name || '',
         quantity: product.quantity || '',
         price: product.price || '',
         initialStock: product.initialStock || '',
@@ -43,7 +45,10 @@ export function UpdateProductDialog({ open, onClose, product, onUpdateProduct, o
   // Handle form validation
   const validateForm = () => {
     const newErrors = {}
-    
+
+    if (!formData.name.trim()) {
+      newErrors.name = 'Product name is required'
+    }
     if (formData.quantity === '' || parseInt(formData.quantity) < 0) {
       newErrors.quantity = 'Valid quantity is required'
     }
@@ -75,6 +80,7 @@ export function UpdateProductDialog({ open, onClose, product, onUpdateProduct, o
       // Prepare product data
       const productData = {
         id: product._id,
+        name: formData.name.trim(),
         supplierId: product.supplierId, // Keep existing supplierId
         categoryId: product.categoryId, // Keep existing categoryId
         quantity: parseInt(formData.quantity),
@@ -135,6 +141,7 @@ export function UpdateProductDialog({ open, onClose, product, onUpdateProduct, o
   // Reset form
   const handleClose = () => {
     setFormData({
+      name: '',
       quantity: '',
       price: '',
       initialStock: '',
@@ -153,7 +160,7 @@ export function UpdateProductDialog({ open, onClose, product, onUpdateProduct, o
       size="sm"
     >
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Product Name (Read-only) */}
+        {/* Product Name */}
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700">
             <div className="flex items-center gap-2">
@@ -162,10 +169,17 @@ export function UpdateProductDialog({ open, onClose, product, onUpdateProduct, o
             </div>
           </label>
           <Input
-            value={product?.name || ''}
-            disabled
-            className="bg-gray-50"
+            value={formData.name}
+            onChange={(e) => handleChange('name', e.target.value)}
+            placeholder="e.g., Engine Oil"
+            isError={!!errors.name}
           />
+          {errors.name && (
+            <div className="flex items-center gap-2 text-sm text-red-600">
+              <AlertCircle className="h-4 w-4" />
+              {errors.name}
+            </div>
+          )}
         </div>
 
         {/* Quantity */}
