@@ -39,6 +39,7 @@ export const API_PATH = {
     GET_ALL: "/api/category/load",
     CREATE: "/api/category/create",
     GET_BY_ID: (id) => `/api/category/${id}`,
+    UPDATE: (id) => `/api/category/update/${id}`,
   },
   EMLOYEE: {
     GET_ALL: "/api/employee/all",

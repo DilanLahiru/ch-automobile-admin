@@ -1,5 +1,5 @@
 import React from "react";
-import { User, Lock, History, Wrench, DollarSign, Users } from "lucide-react";
+import { User, Lock, History, Wrench, DollarSign, Users, Tags } from "lucide-react";
 import { motion } from "framer-motion";
 
 /**
@@ -11,6 +11,7 @@ export function TabNavigation({ activeTab, onTabChange, isLoading }) {
     { id: "profile", label: "Profile", icon: User },
     { id: "password", label: "Password", icon: Lock },
     { id: "repairs", label: "Old Repairs", icon: History },
+    { id: "categories", label: "Categories", icon: Tags },
     { id: "service-types", label: "Service Types", icon: Wrench },
     { id: "other-charges", label: "Other Charges", icon: DollarSign },
     { id: "customers", label: "Customers", icon: Users },

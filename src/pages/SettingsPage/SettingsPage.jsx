@@ -8,6 +8,7 @@ import { RepairHistorySection } from "./sections/RepairHistorySection";
 import { ServiceTypeSection } from "./sections/ServiceTypeSection";
 import { OtherChargesSection } from "./sections/OtherChargesSection";
 import { CustomerListSection } from "./sections/CustomerListSection";
+import { CategorySection } from "./sections/CategorySection";
 
 /**
  * SettingsPage Component
@@ -37,6 +38,8 @@ export function SettingsPage() {
         return <OtherChargesSection />;
       case "customers":
         return <CustomerListSection />;
+      case "categories":
+        return <CategorySection />;
       default:
         return <ProfileSection user={user} />;
     }
@@ -48,7 +51,7 @@ export function SettingsPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
         <p className="text-gray-600 mt-2">
-          Manage your profile, security, repair history, service types, other charges, and customers
+          Manage your profile, security, repair history, categories, service types, other charges, and customers
         </p>
       </div>
 

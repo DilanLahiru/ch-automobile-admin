@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Filter,
   MoreHorizontal,
@@ -67,7 +67,16 @@ export function ServiceHistoryList() {
     (state) => state.serviceOrder,
   );
   const [searchTerm, setSearchTerm] = useState("");
-  const [filteredData, setFilteredData] = useState([]);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    status: "all",
+    employee: "all",
+    dateFrom: "",
+    dateTo: "",
+    minAmount: "",
+    maxAmount: "",
+    sortBy: "newest",
+  });
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -77,17 +86,135 @@ export function ServiceHistoryList() {
     handleLoadAllServiceOrders();
   }, []);
 
+  const statuses = useMemo(
+    () =>
+      [...new Set(serviceOrders.map((order) => String(order.status || "").trim()).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b)),
+    [serviceOrders],
+  );
+
+  const employees = useMemo(() => {
+    const employeeMap = new Map();
+    serviceOrders.forEach((order) => {
+      const employee = order.employeeId;
+      const id =
+        typeof employee === "object" && employee
+          ? employee._id || employee.name || "unassigned"
+          : employee || "unassigned";
+      const name =
+        typeof employee === "object" && employee
+          ? employee.name || "Unassigned"
+          : employee || "Unassigned";
+      employeeMap.set(String(id), { id: String(id), name: String(name) });
+    });
+    return [...employeeMap.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [serviceOrders]);
+
+  const filteredData = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+    const startDate = filters.dateFrom
+      ? new Date(`${filters.dateFrom}T00:00:00`).getTime()
+      : null;
+    const endDate = filters.dateTo
+      ? new Date(`${filters.dateTo}T23:59:59.999`).getTime()
+      : null;
+
+    const filtered = serviceOrders.filter((item) => {
+      const customer = item.customerId;
+      const customerName =
+        typeof customer === "object" && customer ? customer.name : customer;
+      const employee = item.employeeId;
+      const employeeName =
+        typeof employee === "object" && employee
+          ? employee.name || "Unassigned"
+          : employee || "Unassigned";
+      const employeeId =
+        typeof employee === "object" && employee
+          ? employee._id || employee.name || "unassigned"
+          : employee || "unassigned";
+      const searchableValues = [
+        item.vehicleNumber,
+        customerName,
+        typeof customer === "object" && customer ? customer.contactNumber : "",
+        item.serviceDescription,
+        employeeName,
+      ];
+      const matchesSearch =
+        !normalizedSearch ||
+        searchableValues.some((value) =>
+          String(value || "").toLowerCase().includes(normalizedSearch),
+        );
+      const matchesStatus =
+        filters.status === "all" ||
+        String(item.status || "").trim().toLowerCase() ===
+          filters.status.toLowerCase();
+      const matchesEmployee =
+        filters.employee === "all" ||
+        String(employeeId) === filters.employee;
+
+      const serviceDate = new Date(item.createdAt).getTime();
+      const matchesStartDate = startDate === null || serviceDate >= startDate;
+      const matchesEndDate = endDate === null || serviceDate <= endDate;
+      const amount = Number(item.totalAmount) || 0;
+      const matchesMinAmount =
+        filters.minAmount === "" || amount >= Number(filters.minAmount);
+      const matchesMaxAmount =
+        filters.maxAmount === "" || amount <= Number(filters.maxAmount);
+
+      return (
+        matchesSearch &&
+        matchesStatus &&
+        matchesEmployee &&
+        matchesStartDate &&
+        matchesEndDate &&
+        matchesMinAmount &&
+        matchesMaxAmount
+      );
+    });
+
+    return [...filtered].sort((a, b) => {
+      switch (filters.sortBy) {
+        case "oldest":
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case "amount-asc":
+          return (Number(a.totalAmount) || 0) - (Number(b.totalAmount) || 0);
+        case "amount-desc":
+          return (Number(b.totalAmount) || 0) - (Number(a.totalAmount) || 0);
+        default:
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+    });
+  }, [serviceOrders, searchTerm, filters]);
+
+  const activeFilterCount =
+    Number(filters.status !== "all") +
+    Number(filters.employee !== "all") +
+    Number(filters.dateFrom !== "") +
+    Number(filters.dateTo !== "") +
+    Number(filters.minAmount !== "") +
+    Number(filters.maxAmount !== "") +
+    Number(filters.sortBy !== "newest");
+
+  const handleFilterChange = (field, value) => {
+    setFilters((previous) => ({ ...previous, [field]: value }));
+  };
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setFilters({
+      status: "all",
+      employee: "all",
+      dateFrom: "",
+      dateTo: "",
+      minAmount: "",
+      maxAmount: "",
+      sortBy: "newest",
+    });
+  };
+
   useEffect(() => {
-    // Filter data whenever serviceOrders or searchTerm changes
-    const filtered = serviceOrders.filter(
-      (item) =>
-        item.vehicleNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        String(item.customerId?.name)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.serviceDescription?.toLowerCase().includes(searchTerm.toLowerCase()),
-    );
-    setFilteredData(filtered);
     setCurrentPage(1);
-  }, [serviceOrders, searchTerm]);
+  }, [serviceOrders, searchTerm, filters]);
 
   const handleLoadAllServiceOrders = async () => {
     try {
@@ -114,49 +241,11 @@ export function ServiceHistoryList() {
     firstRecordIndex + recordsPerPage,
   );
 
-  /**
-   * Get status badge component based on service order status
-   * @param {string} status - The status from backend (completed, pending, in-progress, etc.)
-   * @returns {JSX.Element} Badge component with appropriate styling
-   */
-  const getStatusBadge = (status) => {
-    const statusMap = {
-      completed: {
-        variant: "success",
-        icon: CheckCircle2,
-        label: "Completed",
-      },
-      pending: {
-        variant: "warning",
-        icon: AlertCircle,
-        label: "Pending",
-      },
-      "in-progress": {
-        variant: "default",
-        icon: Clock,
-        label: "In Progress",
-      },
-      cancelled: {
-        variant: "destructive",
-        icon: AlertCircle,
-        label: "Cancelled",
-      },
-    };
-
-    const statusConfig = statusMap[status?.toLowerCase()] || {
-      variant: "neutral",
-      icon: Wrench,
-      label: status || "Unknown",
-    };
-
-    const Icon = statusConfig.icon;
-
-    return (
-      <Badge variant={statusConfig.variant} className="gap-1">
-        <Icon className="h-3 w-3" /> {statusConfig.label}
-      </Badge>
-    );
-  };
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   return (
     <div className="space-y-6">
@@ -175,7 +264,7 @@ export function ServiceHistoryList() {
         <div className="flex flex-col gap-4 border-b border-gray-100 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="w-full sm:w-72">
             <SearchBar
-              placeholder="Search vehicle number, customer ID..."
+              placeholder="Search vehicle, customer, service, or employee..."
               value={searchTerm}
               onSearch={setSearchTerm}
             />
@@ -185,14 +274,92 @@ export function ServiceHistoryList() {
               variant="outline"
               size="sm"
               leftIcon={<Filter className="h-3.5 w-3.5" />}
+              onClick={() => setIsFilterOpen((open) => !open)}
+              aria-expanded={isFilterOpen}
             >
-              Filter
+              Filter{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
             </Button>
+            {(activeFilterCount > 0 || searchTerm.trim()) && (
+              <Button variant="ghost" size="sm" onClick={clearFilters}>
+                Clear
+              </Button>
+            )}
             <Button variant="outline" size="sm">
               Export
             </Button>
           </div>
         </div>
+
+        {isFilterOpen && (
+          <div className="border-b border-gray-100 bg-gray-50/70 p-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+
+              <div className="space-y-1.5">
+                <label htmlFor="history-employee" className="text-xs font-medium text-gray-700">
+                  Assigned employee
+                </label>
+                <select
+                  id="history-employee"
+                  value={filters.employee}
+                  onChange={(event) => handleFilterChange("employee", event.target.value)}
+                  className="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-xs text-gray-700"
+                >
+                  <option value="all">All employees</option>
+                  {employees.map((employee) => (
+                    <option key={employee.id} value={employee.id}>
+                      {employee.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="history-date-from" className="text-xs font-medium text-gray-700">
+                  Service date from
+                </label>
+                <input
+                  id="history-date-from"
+                  type="date"
+                  value={filters.dateFrom}
+                  max={filters.dateTo || undefined}
+                  onChange={(event) => handleFilterChange("dateFrom", event.target.value)}
+                  className="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-xs text-gray-700"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="history-date-to" className="text-xs font-medium text-gray-700">
+                  Service date to
+                </label>
+                <input
+                  id="history-date-to"
+                  type="date"
+                  value={filters.dateTo}
+                  min={filters.dateFrom || undefined}
+                  onChange={(event) => handleFilterChange("dateTo", event.target.value)}
+                  className="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-xs text-gray-700"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="history-sort" className="text-xs font-medium text-gray-700">
+                  Sort by
+                </label>
+                <select
+                  id="history-sort"
+                  value={filters.sortBy}
+                  onChange={(event) => handleFilterChange("sortBy", event.target.value)}
+                  className="h-9 w-full rounded-lg border border-gray-300 bg-white px-3 text-xs text-gray-700"
+                >
+                  <option value="newest">Newest first</option>
+                  <option value="oldest">Oldest first</option>
+                  <option value="amount-desc">Amount: high to low</option>
+                  <option value="amount-asc">Amount: low to high</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Table Section */}
         <div className="overflow-x-auto">
@@ -211,7 +378,7 @@ export function ServiceHistoryList() {
             <tbody className="divide-y divide-gray-100">
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan="8" className="px-6 py-8 text-center text-gray-500">
                     Loading service orders...
                   </td>
                 </tr>
@@ -231,10 +398,10 @@ export function ServiceHistoryList() {
                             {order.vehicleNumber || "N/A"}
                           </p>
                           <p className="text-xs text-gray-500">
-                            {order.customerId.name || "Unknown Customer"}
+                            {order.customerId?.name || "Unknown Customer"}
                           </p>
                           <p className="text-xs text-gray-500">
-                            {order.customerId.contactNumber || "No Contact"}
+                            {order.customerId?.contactNumber || "No Contact"}
                           </p>
                         </div>
                       </div>
@@ -307,9 +474,6 @@ export function ServiceHistoryList() {
                         </button>
                       </div>
                     </td>
-                    {/* <td className="px-6 py-4">
-                      {getStatusBadge(order.status)}
-                    </td> */}
                     {/* <td className="px-6 py-4 text-right">
                       <button
                         onClick={() => handleShowInvoice(order)}
@@ -322,8 +486,10 @@ export function ServiceHistoryList() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="7" className="px-6 py-8 text-center text-gray-500">
-                    No service orders found.
+                  <td colSpan="8" className="px-6 py-8 text-center text-gray-500">
+                    {searchTerm.trim() || activeFilterCount > 0
+                      ? "No service orders match your search or filters."
+                      : "No service orders found."}
                   </td>
                 </tr>
               )}
@@ -335,7 +501,7 @@ export function ServiceHistoryList() {
         <div className="flex flex-col items-center justify-between gap-4 border-t border-gray-100 px-6 py-4 sm:flex-row">
           <p className="text-xs text-gray-500">
             Showing <span className="font-medium">{filteredData.length === 0 ? 0 : firstRecordIndex + 1}-{Math.min(firstRecordIndex + recordsPerPage, filteredData.length)}</span>{" "}
-            of <span className="font-medium">{serviceOrders.length}</span> results
+            of <span className="font-medium">{filteredData.length}</span> results
           </p>
           <div className="flex gap-2">
             <Button

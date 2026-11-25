@@ -13,7 +13,6 @@ export const getAllCategories = createAsyncThunk(
           "Content-Type": "application/json",
         },
       });
-      console.log(response.data);
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to fetch category data");
@@ -58,15 +57,15 @@ export const getCategoryById = createAsyncThunk(
 // Async Thunk for Update Category
 export const updateCategory = createAsyncThunk(
   "category/update",
-  async (categoryData, { rejectWithValue }) => {
+  async ({ id, categoryData }, { rejectWithValue }) => {
     try {
-      const response = await axios.put(`${baseUrl}${API_PATH.CATEGORY.UPDATE}`, categoryData, {
+      await axios.put(`${baseUrl}${API_PATH.CATEGORY.UPDATE(id)}`, categoryData, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
-      return response.data;
+      return { id, name: categoryData.name };
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || "Failed to update category");
     }
@@ -107,9 +106,11 @@ const categorySlice = createSlice({
     builder
       .addCase(getAllCategories.pending, (state) => {
         state.loading = true;
+        state.error = null;
       })
       .addCase(getAllCategories.fulfilled, (state, action) => {
         state.loading = false;
+        state.error = null;
         state.categories = action.payload;
       })
       .addCase(getAllCategories.rejected, (state, action) => {
@@ -139,8 +140,8 @@ const categorySlice = createSlice({
       .addCase(updateCategory.fulfilled, (state, action) => {
         state.loading = false;
         state.categories = state.categories.map((category) => {
-          if (category._id === action.payload._id) {
-            return action.payload;
+          if (category._id === action.payload.id) {
+            return { ...category, name: action.payload.name };
           } else {
             return category;
           }
