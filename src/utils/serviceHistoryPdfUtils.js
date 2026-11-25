@@ -736,7 +736,7 @@ const generateServiceHistoryHTML = (serviceOrder) => {
     <!-- Service report / description note (kept as original style) -->
     <div class="note">
       <strong>Service Report</strong><br>
-      <b style="font-size:11px; color:#444; font-weight: 500; marigin-top:6px;">${serviceOrder.serviceDescription || "Vehicle condition checked – all systems operational."}</b>
+      <b style="font-size:11px; color:#8B0000; font-weight: 500; marigin-top:6px;">${serviceOrder.serviceDescription || "Vehicle condition checked – all systems operational."}</b>
     </div>
 
     <!-- ========== NEW SECTION: QR CODE + BANK DETAILS (exactly like reference image) ========== -->
