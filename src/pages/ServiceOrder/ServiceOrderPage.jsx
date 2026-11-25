@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Plus,
@@ -20,6 +20,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { getAllEmployee } from "../../features/employeeSlice";
 import { getAllAppointments } from "../../features/appointmentSlice";
 import { getAllProducts } from "../../features/productSlice";
+import { getAllCategories } from "../../features/categorySlice";
 import { getAllServiceTypes, createServiceType, selectServiceTypes } from "../../features/serviceTypeSlice";
 import { getAllOtherCharges, selectOtherCharges } from "../../features/otherChargesSlice";
 import {
@@ -48,6 +49,8 @@ export function ServiceOrderPage() {
   } = useSelector((state) => state.appointment);
   const { products: productsFromRedux, loading: isLoadingProducts } =
     useSelector((state) => state.product);
+  const { categories: categoriesFromRedux, loading: isLoadingCategories } =
+    useSelector((state) => state.category);
   const {
     isLoading: isLoadingServiceOrder,
     externalMaterials,
@@ -76,6 +79,7 @@ export function ServiceOrderPage() {
   const [activePartDropdown, setActivePartDropdown] = useState(false);
   const [partSearchTerm, setPartSearchTerm] = useState("");
   const [selectedPartId, setSelectedPartId] = useState("");
+  const [selectedPartCategoryId, setSelectedPartCategoryId] = useState("");
   const [externalPartForm, setExternalPartForm] = useState({
     name: "",
     price: "",
@@ -85,6 +89,45 @@ export function ServiceOrderPage() {
   const [showExternalPartSuggestions, setShowExternalPartSuggestions] =
     useState(false);
   const [hasHydratedWorkingState, setHasHydratedWorkingState] = useState(false);
+
+  const filteredParts = useMemo(() => {
+    const searchTerm = partSearchTerm.trim().toLowerCase();
+    const selectedCategory = (categoriesFromRedux || []).find(
+      (category) => String(category._id) === selectedPartCategoryId,
+    );
+    if (!selectedCategory) return [];
+
+    return (Array.isArray(productsFromRedux) ? productsFromRedux : []).filter(
+      (part) => {
+        const partCategory = part.categoryId || part.category;
+        const partCategoryId =
+          typeof partCategory === "object" && partCategory
+            ? partCategory._id
+            : partCategory;
+        const partCategoryName =
+          part.categoryName ||
+          (typeof partCategory === "object" && partCategory
+            ? partCategory.name
+            : "");
+        const matchesCategory =
+          partCategoryId != null
+            ? String(partCategoryId) === selectedPartCategoryId
+            : String(partCategoryName).toLowerCase() ===
+              String(selectedCategory.name || "").toLowerCase();
+        if (!matchesCategory) return false;
+
+        if (!searchTerm) return true;
+        const name = String(part.name || "").toLowerCase();
+        const price = String(part.price || 0).toLowerCase();
+        return name.includes(searchTerm) || price.includes(searchTerm);
+      },
+    );
+  }, [
+    productsFromRedux,
+    categoriesFromRedux,
+    selectedPartCategoryId,
+    partSearchTerm,
+  ]);
 
   useEffect(() => {
     loadAllDetails();
@@ -134,6 +177,7 @@ export function ServiceOrderPage() {
         dispatch(getAllEmployee()),
         dispatch(getAllAppointments()),
         dispatch(getAllProducts()),
+        dispatch(getAllCategories()),
         dispatch(getAllServiceTypes()),
         dispatch(getAllOtherCharges()),
         dispatch(getAllExternalMaterials()),
@@ -441,21 +485,10 @@ export function ServiceOrderPage() {
     return parts;
   };
 
-  const getFilteredParts = () => {
-    const searchTerm = partSearchTerm.trim().toLowerCase();
-    const parts = getAvailableParts();
-    if (!searchTerm) return parts;
-
-    return parts.filter((part) => {
-      const name = (part.name || "").toLowerCase();
-      const price = String(part.price || 0).toLowerCase();
-      return name.includes(searchTerm) || price.includes(searchTerm);
-    });
-  };
-
   const handlePartSearchFocus = () => {
     setActivePartDropdown(true);
     setPartSearchTerm("");
+    setSelectedPartId("");
   };
 
   const handlePartSearchBlur = () => {
@@ -1930,6 +1963,35 @@ export function ServiceOrderPage() {
             <div className="space-y-4">
               {/* Add Parts Form */}
               <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+                <div className="w-full sm:w-56">
+                  <label
+                    htmlFor="partCategory"
+                    className="mb-1.5 block text-xs font-medium text-gray-700"
+                  >
+                    Part Category
+                  </label>
+                  <select
+                    id="partCategory"
+                    value={selectedPartCategoryId}
+                    onChange={(event) => {
+                      setSelectedPartCategoryId(event.target.value);
+                      setSelectedPartId("");
+                      setPartSearchTerm("");
+                      setActivePartDropdown(false);
+                    }}
+                    disabled={isLoadingCategories}
+                    className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-100"
+                  >
+                    <option value="">
+                      {isLoadingCategories ? "Loading categories..." : "Select category"}
+                    </option>
+                    {(categoriesFromRedux || []).map((category) => (
+                      <option key={category._id} value={category._id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <div className="flex-1">
                   <label className="mb-1.5 block text-xs font-medium text-gray-700">
                     Add Part
@@ -1947,13 +2009,20 @@ export function ServiceOrderPage() {
                         setSelectedPartId("");
                         setActivePartDropdown(true);
                       }}
-                      disabled={isLoadingProducts}
+                      disabled={
+                        isLoadingProducts ||
+                        isLoadingCategories ||
+                        !selectedPartCategoryId
+                      }
                     />
 
-                    {activePartDropdown && !isLoadingProducts && (
+                    {activePartDropdown &&
+                      !isLoadingProducts &&
+                      !isLoadingCategories &&
+                      selectedPartCategoryId && (
                       <div className="absolute z-30 mt-1 max-h-52 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
-                        {getFilteredParts().length > 0 ? (
-                          getFilteredParts().map((part) => (
+                        {filteredParts.length > 0 ? (
+                          filteredParts.map((part) => (
                             <button
                               key={part._id}
                               type="button"
@@ -1965,7 +2034,9 @@ export function ServiceOrderPage() {
                             </button>
                           ))
                         ) : (
-                          <div className="px-3 py-2 text-xs text-gray-500">No parts found</div>
+                          <div className="px-3 py-2 text-xs text-gray-500">
+                            No parts found in this category.
+                          </div>
                         )}
                       </div>
                     )}
@@ -2008,7 +2079,13 @@ export function ServiceOrderPage() {
                     document.getElementById("partQty").value = "1";
                     document.getElementById("partDiscount").value = "0";
                   }}
-                  disabled={!currentRepair.vehicleNumber || isLoadingProducts}
+                  disabled={
+                    !currentRepair.vehicleNumber ||
+                    !selectedPartCategoryId ||
+                    !selectedPartId ||
+                    isLoadingProducts ||
+                    isLoadingCategories
+                  }
                 >
                   <Plus className="h-4 w-4 mr-2" /> Add
                 </Button>
